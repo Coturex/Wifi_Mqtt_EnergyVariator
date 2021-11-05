@@ -2,7 +2,7 @@
 
 # Wifi_Mqtt_Power_Variator
  * Adjust 'Power Consumption' of a resistive load (up to 3kW)
- * Data sent to your Domotic Box, raspberry, PC... using a MQTT Broker
+ * Data sent to your Domotic Box, raspberry, PC... using an MQTT Broker
  * Listen  Power command received on MQTT topic
  * Publish Power values on MQTT 'vload topic' and on 'domoticz/in' topic (for Domoticz)
  * Display Power/Percent/Max on mini screen    
@@ -10,7 +10,7 @@
  * Wifi Access Point WebServer and set custom parameters
  * WebOTA : On The Air firmware update (url http://<vload_ip>:8080/webota - 60s after boot)
 
-## Hardware requirements:   ~10 €
+## Hardware requirements:   ~30 €
  * IGBT Power Variator  (homebrew...)
     - no human frequency sound
     - reasonable frequency spurious (vs TRIAC)
