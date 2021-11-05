@@ -16,7 +16,9 @@
     - no human frequency sound
     - reasonable frequency spurious (vs TRIAC)
     - very low resistive on transcient region and can handle more current
+      (or better cooling)
     - no zero crossing managment
+
     **→** others like Mosfet, Triac ... can be used but the code need to be implemented anymore
 
  * ESP Board : Wemos d1 mini (CH341 uart), esp8266
