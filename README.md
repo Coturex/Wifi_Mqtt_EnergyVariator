@@ -2,8 +2,9 @@
 
 # Wifi_Mqtt_Power_Variator
  * Adjust 'Power Consumption' of a resistive load (up to 3kW)
- * Power command received trought MQTT topic
- * Publish power values on MQTT 'vload topic' and on 'domoticz/in' topic (for Domoticz)
+ * Data sent to your Domotic Box, raspberry, PC... using a MQTT Broker
+ * Listen  Power command received on MQTT topic
+ * Publish Power values on MQTT 'vload topic' and on 'domoticz/in' topic (for Domoticz)
  * Display Power/Percent/Max on mini screen    
 
  * Wifi Access Point WebServer and set custom parameters
@@ -26,7 +27,6 @@
    - I2C wired on D1-SCL D2-SDA
 
 * AC-DC 5V 700mA-Small
-
 
 ## FYI : 
 some Linux distrib (Ubuntu 20.x) failed on connect Uart CH340/1 while flashing ESP8266
