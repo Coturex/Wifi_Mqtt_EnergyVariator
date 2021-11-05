@@ -10,14 +10,14 @@
  * WebOTA : On The Air firmware update (url http://<vload_ip>:8080/webota - 60s after boot)
 
 ## Hardware requirements:   ~10 €
- * IGBT Power Variator  (homebrew, is coming...)
+ * IGBT Power Variator  (homebrew...)
     - no human frequency sound
     - reasonable frequency spurious (vs TRIAC)
     - very low resistive on transcient region and can handle more current
       (or better cooling)
     - no zero crossing managment
 
-    **→** others like Mosfet, Triac ... can be used but the code need to be implemented anymore
+    **→** others like Mosfet, Triac ... can be used but this code need to be implemented anymore
 
  * ESP Board : Wemos d1 mini (CH341 uart), esp8266
    - When choosing GPIO pins to use, it's best to avoid GPIO 0, 2 and 15 (D3, D4, D8)
