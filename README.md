@@ -1,3 +1,5 @@
+# **this project is on going...**
+
 # Wifi_Mqtt_Power_Variator
  * Adjust 'Power Consumption' of a resistive load
  * Power command received trought MQTT topic
@@ -7,7 +9,6 @@
  * Wifi Access Point WebServer and set custom parameters
  * WebOTA : On The Air firmware update (url http://<vload_ip>:8080/webota - 60s after boot)
 
-# this project is on going...
 
 
 ## Hardware requirements:   ~10 €
