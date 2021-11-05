@@ -10,7 +10,7 @@
  * Wifi Access Point WebServer and set custom parameters
  * WebOTA : On The Air firmware update (url http://<vload_ip>:8080/webota - 60s after boot)
 
-## Hardware requirements:   ~30 €
+## Hardware requirements:   ~25-28 €
  * IGBT Power Variator  (homebrew...)
     - no human frequency sound
     - reasonable frequency spurious (vs TRIAC)
