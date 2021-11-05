@@ -38,7 +38,6 @@
 //#include "myConfig_sample.h"  // Personnal settings - 'gited file'
 #include "myConfig.h"           // Personnal settings - Not 'gited file'
 #include <EEPROM.h>             // EEPROM access...
-#define MAX_STRING_LENGTH 20         
 
 #define FW_VERSION "1.0"
 #define DOMO_TOPIC "domoticz/in"
@@ -54,11 +53,12 @@ WiFiClient espClient ;
 PubSubClient mqtt_client(espClient);  
 String cmdTopic;
 String outTopic;
+#define MQTT_RETRY 5     // How many retries before starting AccessPoint
 
 //  TEST & DEBUG OPTION FLAGS
-bool myDEBUG = true ;
+bool DEBUG = true ;
 bool TEST_CP         = false; // AP : always start the ConfigPortal, even if ap found
-int  TESP_CP_TIMEOUT = 30;    // AP : test cp timeout
+int  TESP_CP_TIMEOUT = 30;    // AP : AccessPoint timeout and leave AP
 bool ALLOWONDEMAND   = true;  // AP : enable on demand - e.g Trigged on Gpio Input, On Mqtt Msg etc...
 
 // current power (as a percentage of time) : power off at startup.
@@ -66,12 +66,12 @@ float power = 0;
 
 #define PWM_PIN D7
 
-
+#define MAX_STRING_LENGTH 35
 struct { 
     char mqtt_server[MAX_STRING_LENGTH] = "";
     char mqtt_port[MAX_STRING_LENGTH] = "";
-    char pload_topic[MAX_STRING_LENGTH] = "";
-    char pload_id[MAX_STRING_LENGTH] = "";
+    char vload_topic[MAX_STRING_LENGTH] = "";
+    char vload_id[MAX_STRING_LENGTH] = "";
     char idx_power[MAX_STRING_LENGTH] = "";
     char idx_percent[MAX_STRING_LENGTH] = "";
     char power_max[MAX_STRING_LENGTH] = "";
@@ -80,8 +80,8 @@ struct {
 WiFiManager wm;
 WiFiManagerParameter custom_mqtt_server("mqtt_server", "mqtt IP server", "", 15);
 WiFiManagerParameter custom_mqtt_port("mqtt_port", "mqtt Port", "", 4);
-WiFiManagerParameter custom_pload_topic("pload_topic", "pLoad Topic", "", 35);
-WiFiManagerParameter custom_pload_id("pload_id", "pLoad ID", "", 15);
+WiFiManagerParameter custom_vload_topic("vload_topic", "vload Topic", "", 35);
+WiFiManagerParameter custom_vload_id("vload_id", "vload ID", "", 15);
 WiFiManagerParameter custom_idx_power("idx_power", "Domoticz idx power", "", 4); 
 WiFiManagerParameter custom_idx_percent("idx_volt", "Domoticz idx voltage", "", 4);
 WiFiManagerParameter custom_power_max("power_max", "Maximum load power", "", 4);
@@ -99,8 +99,8 @@ void saveWifiCallback() { // Save settings to EEPROM
     Serial.println("[CALLBACK] saveParamCallback fired"); 
     strncpy(settings.mqtt_server, custom_mqtt_server.getValue(), MAX_STRING_LENGTH);  
     strncpy(settings.mqtt_port, custom_mqtt_port.getValue(), MAX_STRING_LENGTH);  
-    strncpy(settings.pload_topic, custom_pload_topic.getValue(), MAX_STRING_LENGTH);  
-    strncpy(settings.pload_id, custom_pload_id.getValue(), MAX_STRING_LENGTH);  
+    strncpy(settings.vload_topic, custom_vload_topic.getValue(), MAX_STRING_LENGTH);  
+    strncpy(settings.vload_id, custom_vload_id.getValue(), MAX_STRING_LENGTH);  
     strncpy(settings.idx_power, custom_idx_power.getValue(), MAX_STRING_LENGTH);  
     strncpy(settings.idx_percent, custom_idx_percent.getValue(), MAX_STRING_LENGTH);  
     strncpy(settings.power_max, custom_power_max.getValue(), MAX_STRING_LENGTH);  
@@ -114,8 +114,8 @@ void read_Settings () { // From EEPROM
     EEPROM.get(addr, settings); //read data from array in ram and cast it to settings
     Serial.println("[READ EEPROM] mqtt_server : " + String(settings.mqtt_server) ) ;
     Serial.println("[READ EEPROM] mqtt_port : " + String(settings.mqtt_port) ) ;
-    Serial.println("[READ EEPROM] pload_topic : " + String(settings.pload_topic) ) ;
-    Serial.println("[READ EEPROM] pload_id : " + String(settings.pload_id) ) ;
+    Serial.println("[READ EEPROM] vload_topic : " + String(settings.vload_topic) ) ;
+    Serial.println("[READ EEPROM] vload_id : " + String(settings.vload_id) ) ;
     Serial.println("[READ EEPROM] idx_power : " + String(settings.idx_power) ) ;
     Serial.println("[READ EEPROM] idx_percent : " + String(settings.idx_percent) ) ;
     Serial.println("[READ EEPROM] power_max : " + String(settings.power_max) ) ;
@@ -160,7 +160,8 @@ void setup_wifi () {
     wm.addParameter(&custom_html);
     wm.addParameter(&custom_mqtt_server);
     wm.addParameter(&custom_mqtt_port);
-    wm.addParameter(&custom_pload_topic);
+    wm.addParameter(&custom_vload_topic); 
+    wm.addParameter(&custom_vload_id);
     wm.addParameter(&custom_idx_power);
     wm.addParameter(&custom_idx_percent);
     wm.addParameter(&custom_power_max);               
@@ -177,7 +178,7 @@ void setup_wifi () {
     //useful to make it all retry or go to sleep in seconds
     wm.setConfigPortalTimeout(120);
     WiFi.printDiag(Serial);
-    if(!wm.autoConnect("pload_AP","admin")) {
+    if(!wm.autoConnect("vload_AP","admin")) {
         Serial.println("failed to connect and hit timeout");
     } 
     else if(TEST_CP) {
@@ -185,7 +186,7 @@ void setup_wifi () {
         delay(1000);
         Serial.println("TEST_CP ENABLED");
         wm.setConfigPortalTimeout(TESP_CP_TIMEOUT);
-        wm.startConfigPortal("test_pload_AP");
+        wm.startConfigPortal("test_vload_AP");
     }
     else {
         //Here connected to the WiFi
@@ -197,7 +198,7 @@ void setup_wifi () {
 bool mqtt_connect(int retry) {
     bool ret = false ;
     while (!mqtt_client.connected() && WiFi.status() == WL_CONNECTED && retry) {
-        String clientId = "pload-" + String(settings.pload_id);
+        String clientId = "vload-" + String(settings.vload_id);
         Serial.print("Mqtt (re)connecting (" + String(retry) + ") ") ;
         retry--;
         Serial.println(String(settings.mqtt_server)+":"+String(settings.mqtt_port)) ; 
@@ -212,6 +213,7 @@ bool mqtt_connect(int retry) {
             delay(5000);
         } else {
             ret = true ;
+            delay(2000);
             mqtt_client.subscribe(cmdTopic.c_str());
             // sendCurrentPower();
         }
@@ -220,21 +222,22 @@ bool mqtt_connect(int retry) {
 }
 
 void bootPub() {
-        String  msg = "{\"type\": \"pload\"";	
+        String  msg = "{\"type\": \"vload\"";	
                 msg += ", \"id\": ";
-                msg += "\"" + String(settings.pload_id) + "\"" ;
+                msg += "\"" + String(settings.vload_id) + "\"" ;
                 msg += ", \"fw_version\": ";
                 msg += "\"" + String(FW_VERSION) + "\"" ;
-                msg += ", \"pload_version\": ";
+                msg += ", \"vload_version\": ";
                 msg += "\"v3.0\"" ;
-                msg += ", \"pload_idx1\": ";
+                msg += ", \"vload_idx1\": ";
                 msg += "\"" + String(settings.idx_power) + "\"" ;
-                msg += ", \"pload_idx2\": ";
+                msg += ", \"vload_idx2\": ";
                 msg += "\"" + String(settings.idx_percent) + "\"" ;
                 msg += ", \"ip\": ";  
                 msg += WiFi.localIP().toString().c_str() ;
                 msg += "}" ;
-        mqtt_client.publish(String(settings.pload_topic).c_str(), msg.c_str()); 
+        Serial.println("Sending boot on topic : "); Serial.print(String(settings.vload_topic));
+        mqtt_client.publish(String(settings.vload_topic).c_str(), msg.c_str()); 
 }
 
 void domoPub(String idx, float value) {
@@ -248,18 +251,19 @@ void domoPub(String idx, float value) {
       mqtt_client.publish(outTopic.c_str(), msg.c_str()); 
 }
 
-void statusPub(void) {
-    String msg = "{\"type\": \"pload\"";
-    msg += ", \"id\": ";
-    msg += String(settings.pload_id); 
-    msg += ", \"value\": ";
-    msg += String("--");
+void statusPub(float percent, float power ) {
+    String msg = "{";
+    msg += "\"percent\": ";
+    msg += String(percent);
+    msg += ", \"power\": ";
+    msg += String(power);
     msg += "}";
-    String topic = String(settings.pload_topic)+"/"+String(settings.pload_id) ;
+    String topic = String(settings.vload_topic)+"/"+String(settings.vload_id) ;
     mqtt_client.publish(String(topic).c_str(), msg.c_str()); 
 } 
 
 void on_message(char* topic, byte* payload, unsigned int length) {
+    if (DEBUG) { Serial.println("receiving msg on "); Serial.print(String(topic));}; 
     char buffer[length+1];
     memcpy(buffer, payload, length);
     buffer[length] = '\0';
@@ -267,7 +271,7 @@ void on_message(char* topic, byte* payload, unsigned int length) {
     if(p >= 0 && p<=254) {
         power = p;
         analogWrite(PWM_PIN, power) ;
-        // sendCurrentPower();
+        statusPub(p/254*100,p*100) ;
     }
 }
 
@@ -279,7 +283,7 @@ void setup() {
     // OLED Shield 
     display.begin(SSD1306_SWITCHCAPVCC, 0x3C);  // initialize with the I2C addr 0x3C (for the 64x48)
     display.display();
-    if (myDEBUG) {delay(10000);} 
+    if (DEBUG) {delay(10000);} 
     
     //load eeprom data (sizeof(settings) bytes) from flash memory into ram
     EEPROM.begin(sizeof(settings));
@@ -291,8 +295,8 @@ void setup() {
     uint16_t port ;
     char *ptr ;
     port = strtoul(settings.mqtt_port,&ptr,10) ;
-    cmdTopic = String(settings.pload_topic) + "/" + String(settings.pload_id) +"/cmd";  //e.g topic :regul/pload/id-00/cmd
-    outTopic = String(settings.pload_topic) + "/" + String(settings.pload_id) ;         //e.g topic :regul/pload/id-00/
+    cmdTopic = String(settings.vload_topic) + "/" + String(settings.vload_id) +"/cmd";  //e.g topic :regul/vload/id-00/cmd
+    outTopic = String(settings.vload_topic) + "/" + String(settings.vload_id) ;         //e.g topic :regul/vload/id-00/
 
     mqtt_client.setServer(settings.mqtt_server, port); // data will be published
     mqtt_client.setCallback(on_message); // listening 
@@ -308,9 +312,18 @@ void loop() {
         wifi_connect();
     }
     if (!mqtt_client.connected() && WiFi.status() == WL_CONNECTED ) {
-        if (mqtt_connect(0)) { // retry, workaround which allow webOTA handle (at the end of loop)
+        if (mqtt_connect(MQTT_RETRY)) { 
             bootPub();
-        } 
+        // } else { // Start AP, maybe MQTT Conf is bad
+        //     Serial.println("Is MQTT bad configuration ? AP started.");
+        //     oled_cls(1);
+        //     display.println("MQTT Failed");
+        //     display.println("Running");
+        //     display.println("Access Point");
+        //     display.display();
+        //     wm.setConfigPortalTimeout(TESP_CP_TIMEOUT);
+        //     wm.startConfigPortal("vload_AP");            
+        }
     }
     mqtt_client.loop(); // seems it blocks for 100ms
     Serial.println("--") ;
@@ -334,7 +347,7 @@ void loop() {
     delay(2000) ;
     #endif
 
-    if (myDEBUG) {
+    if (DEBUG) {
         Serial.print("loop time (ms) : ") ;
         Serial.println((millis()-startTime)); // print spare time in loop 
         // delay(10000);
