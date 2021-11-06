@@ -36,7 +36,7 @@
 #endif
 
 //#include "myConfig_sample.h"  // Personnal settings - 'gited file'
-#include "myConfig.h"           // Personnal settings - Not 'gited file'
+//#include "myConfig.h"           // Personnal settings - Not 'gited file'
 #include <EEPROM.h>             // EEPROM access...
 
 #define FW_VERSION "1.0"
@@ -68,6 +68,7 @@ float power = 0;
 
 #define MAX_STRING_LENGTH 35
 struct { 
+    char name[MAX_STRING_LENGTH] = "";
     char mqtt_server[MAX_STRING_LENGTH] = "";
     char mqtt_port[MAX_STRING_LENGTH] = "";
     char vload_topic[MAX_STRING_LENGTH] = "";
@@ -75,9 +76,11 @@ struct {
     char idx_power[MAX_STRING_LENGTH] = "";
     char idx_percent[MAX_STRING_LENGTH] = "";
     char power_max[MAX_STRING_LENGTH] = "";
+    bool AP = 0 ;
   } settings;
 
 WiFiManager wm;
+WiFiManagerParameter custom_name("name", "Oled Title", "", 15);
 WiFiManagerParameter custom_mqtt_server("mqtt_server", "mqtt IP server", "", 15);
 WiFiManagerParameter custom_mqtt_port("mqtt_port", "mqtt Port", "", 4);
 WiFiManagerParameter custom_vload_topic("vload_topic", "vload Topic", "", 35);
@@ -97,6 +100,7 @@ void oled_cls(int size) {
 void saveWifiCallback() { // Save settings to EEPROM
     unsigned int addr=0 ;
     Serial.println("[CALLBACK] saveParamCallback fired"); 
+    strncpy(settings.name, custom_name.getValue(), MAX_STRING_LENGTH);  
     strncpy(settings.mqtt_server, custom_mqtt_server.getValue(), MAX_STRING_LENGTH);  
     strncpy(settings.mqtt_port, custom_mqtt_port.getValue(), MAX_STRING_LENGTH);  
     strncpy(settings.vload_topic, custom_vload_topic.getValue(), MAX_STRING_LENGTH);  
@@ -104,6 +108,7 @@ void saveWifiCallback() { // Save settings to EEPROM
     strncpy(settings.idx_power, custom_idx_power.getValue(), MAX_STRING_LENGTH);  
     strncpy(settings.idx_percent, custom_idx_percent.getValue(), MAX_STRING_LENGTH);  
     strncpy(settings.power_max, custom_power_max.getValue(), MAX_STRING_LENGTH);  
+    settings.AP = 0 ;
     EEPROM.put(addr, settings); //write data to array in ram 
     EEPROM.commit();  //write data from ram to flash memory. Do nothing if there are no changes to EEPROM data in ram
 }
@@ -112,6 +117,7 @@ void read_Settings () { // From EEPROM
     unsigned int addr=0 ;  
     //Serial.println("[READ EEPROM] read_Settings");  
     EEPROM.get(addr, settings); //read data from array in ram and cast it to settings
+    Serial.println("[READ EEPROM] Oled name : " + String(settings.name) ) ;
     Serial.println("[READ EEPROM] mqtt_server : " + String(settings.mqtt_server) ) ;
     Serial.println("[READ EEPROM] mqtt_port : " + String(settings.mqtt_port) ) ;
     Serial.println("[READ EEPROM] vload_topic : " + String(settings.vload_topic) ) ;
@@ -119,7 +125,7 @@ void read_Settings () { // From EEPROM
     Serial.println("[READ EEPROM] idx_power : " + String(settings.idx_power) ) ;
     Serial.println("[READ EEPROM] idx_percent : " + String(settings.idx_percent) ) ;
     Serial.println("[READ EEPROM] power_max : " + String(settings.power_max) ) ;
-
+    Serial.println("[READ EEPROM] power_max : " + String(settings.AP) ) ;
 }
 
 void wifi_connect () {
@@ -158,6 +164,7 @@ void setup_wifi () {
     // setup some parameters
     WiFiManagerParameter custom_html("<p>EEPROM Custom Parameters</p>"); // only custom html
     wm.addParameter(&custom_html);
+    wm.addParameter(&custom_name);   
     wm.addParameter(&custom_mqtt_server);
     wm.addParameter(&custom_mqtt_port);
     wm.addParameter(&custom_vload_topic); 
@@ -181,12 +188,12 @@ void setup_wifi () {
     if(!wm.autoConnect("vload_AP","admin")) {
         Serial.println("failed to connect and hit timeout");
     } 
-    else if(TEST_CP) {
+    else if(TEST_CP or settings.AP) {
         // start configportal always
         delay(1000);
-        Serial.println("TEST_CP ENABLED");
+        Serial.println("AP Config Portal");
         wm.setConfigPortalTimeout(TESP_CP_TIMEOUT);
-        wm.startConfigPortal("test_vload_AP");
+        wm.startConfigPortal("req_vload_AP");
     }
     else {
         //Here connected to the WiFi
@@ -199,9 +206,9 @@ bool mqtt_connect(int retry) {
     bool ret = false ;
     while (!mqtt_client.connected() && WiFi.status() == WL_CONNECTED && retry) {
         String clientId = "vload-" + String(settings.vload_id);
-        Serial.print("Mqtt (re)connecting (" + String(retry) + ") ") ;
+        Serial.print("[mqtt_connect] (re)connecting (" + String(retry) + ") ") ;
         retry--;
-        Serial.println(String(settings.mqtt_server)+":"+String(settings.mqtt_port)) ; 
+        Serial.println("[mqtt_connect]"+String(settings.mqtt_server)+":"+String(settings.mqtt_port)) ; 
         oled_cls(1);
         display.println("Connecting");
         display.println("mqtt - (" + String(retry)+")");  
@@ -213,6 +220,7 @@ bool mqtt_connect(int retry) {
             delay(5000);
         } else {
             ret = true ;
+            Serial.println("[mqtt_connect] Subscribing : "+ cmdTopic) ; 
             delay(2000);
             mqtt_client.subscribe(cmdTopic.c_str());
             // sendCurrentPower();
@@ -247,8 +255,8 @@ void domoPub(String idx, float value) {
       msg += value ;
       msg += "\"}";
 
-      String outTopic = DOMO_TOPIC;             // domoticz topic
-      mqtt_client.publish(outTopic.c_str(), msg.c_str()); 
+      String domTopic = DOMO_TOPIC;             // domoticz topic
+      mqtt_client.publish(domTopic.c_str(), msg.c_str()); 
 }
 
 void statusPub(float percent, float power ) {
@@ -262,6 +270,15 @@ void statusPub(float percent, float power ) {
     mqtt_client.publish(String(topic).c_str(), msg.c_str()); 
 } 
 
+void rebootOnAP(){
+        Serial.println("Force Rebooting on Acess Point");
+        settings.AP = 1 ;
+        unsigned int addr=0 ;
+        EEPROM.put(addr, settings); //write data to array in ram 
+        EEPROM.commit();  // write data from ram to flash memory. Do nothing if there are no changes to EEPROM data in ram
+        ESP.restart();    // call AP directly doesn't works cleanly, a reboot is needed
+}
+
 void on_message(char* topic, byte* payload, unsigned int length) {
     if (DEBUG) { Serial.println("receiving msg on "); Serial.print(String(topic));}; 
     char buffer[length+1];
@@ -272,6 +289,9 @@ void on_message(char* topic, byte* payload, unsigned int length) {
         power = p;
         analogWrite(PWM_PIN, power) ;
         statusPub(p/254*100,p*100) ;
+    }
+    if(p == 999) {    // Special cmd : AccessPoint is requested - 
+        rebootOnAP();
     }
 }
 
@@ -288,8 +308,8 @@ void setup() {
     //load eeprom data (sizeof(settings) bytes) from flash memory into ram
     EEPROM.begin(sizeof(settings));
     Serial.println("EEPROM size: " + String(sizeof(settings)) + " bytes");
-    
     read_Settings(); // read EEPROM
+
     setup_wifi() ;
     delay(5000) ;
     uint16_t port ;
@@ -299,10 +319,10 @@ void setup() {
     outTopic = String(settings.vload_topic) + "/" + String(settings.vload_id) ;         //e.g topic :regul/vload/id-00/
 
     mqtt_client.setServer(settings.mqtt_server, port); // data will be published
-    mqtt_client.setCallback(on_message); // listening 
+    mqtt_client.setCallback(on_message); // subscribing/listening mqtt cmdTopic
     // OTA 
     #ifdef USEOTA
-    //webota.init(8080,"/update"); // Init WebOTA server - to be tested
+    webota.init(8080,"/update"); // Init WebOTA server 
     #endif
 }
 
@@ -314,21 +334,14 @@ void loop() {
     if (!mqtt_client.connected() && WiFi.status() == WL_CONNECTED ) {
         if (mqtt_connect(MQTT_RETRY)) { 
             bootPub();
-        // } else { // Start AP, maybe MQTT Conf is bad
-        //     Serial.println("Is MQTT bad configuration ? AP started.");
-        //     oled_cls(1);
-        //     display.println("MQTT Failed");
-        //     display.println("Running");
-        //     display.println("Access Point");
-        //     display.display();
-        //     wm.setConfigPortalTimeout(TESP_CP_TIMEOUT);
-        //     wm.startConfigPortal("vload_AP");            
+        } else {
+            rebootOnAP();
         }
     }
     mqtt_client.loop(); // seems it blocks for 100ms
     Serial.println("--") ;
     oled_cls(1);
-    display.println("VARIATOR :");
+    display.println(String(settings.name));
     display.println("");
     display.print("% : ");
     display.println("---");
