@@ -1,6 +1,6 @@
 # **this project is on going...**
 
-# Wifi_Mqtt_Power_Variator
+# Wifi_Mqtt_EnergyVariator
  * Adjust 'Power Consumption' of a resistive load (up to 3kW)
  * Data sent to your Domotic Box, raspberry, PC... using an MQTT Broker
  * Listen  Power command received on MQTT topic
@@ -8,7 +8,7 @@
  * Display Power/Percent/Max on mini screen    
 
  * Wifi Access Point WebServer and set custom parameters
- * WebOTA : On The Air firmware update (url http://<vload_ip>:8080/webota - 60s after boot)
+ * WebOTA : On The Air firmware update (url http://<vload_ip>:8080/update - 60s after boot)
 
 ## Hardware requirements:   ~25-28 €
  * IGBT Power Variator  (homebrew...)
