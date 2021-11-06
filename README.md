@@ -14,8 +14,8 @@
  * IGBT Power Variator  (homebrew...)
     - no human frequency sound
     - reasonable frequency spurious (vs TRIAC)
-    - very low resistive on transcient region (dv/dt) and can handle more current
-      (or less overheating )
+    - very low resistive on transcient region (_dv/dt_) and can handle more current
+      (less overheating )
     - no zero crossing managment
 
     **→** others like Mosfet, Triac ... can be used but this code need to be implemented anymore
