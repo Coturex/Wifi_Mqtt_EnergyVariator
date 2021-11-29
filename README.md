@@ -3,7 +3,7 @@
 # Wifi_Mqtt_EnergyVariator
  * Adjust 'Power Consumption' of a resistive load (up to 3kW)
  * Data sent to your Domotic Box, raspberry, PC... using an MQTT Broker
- * Listen  Power command received on MQTT topic
+ * Listening  Power command received on MQTT topic
  * Publish Power values on MQTT 'vload topic' and on 'domoticz/in' topic (for Domoticz)
  * Display Power/Percent/Max on mini screen    
 
