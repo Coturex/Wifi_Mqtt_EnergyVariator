@@ -27,7 +27,7 @@
  * ESP Board : Wemos d1 mini (CH341 uart), esp8266
    - When choosing GPIO pins to use, it's best to avoid GPIO 0, 2 and 15 (D3, D4, D8)
 
-* Oled Shield 64x48 
+* Oled Shield 64x48 _(option : define/undefine in main.cpp code)_
    - I2C wired on D1-SCL D2-SDA
 
 * AC-DC 5V 700mA-Small
