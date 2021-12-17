@@ -20,8 +20,6 @@
       (less overheating )
     - no zero crossing managment
 
-    **→** others like Mosfet, Triac ... can be used but this code need to be implemented anymore
-    
 ![PWM-Control-in-AC11](https://user-images.githubusercontent.com/53934994/140613898-13044e00-b3ac-4ed6-af85-960940436992.jpg)
 
  * ESP Board : Wemos d1 mini (CH341 uart), esp8266
