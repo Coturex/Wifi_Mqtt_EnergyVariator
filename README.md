@@ -39,6 +39,4 @@ some Linux distrib (Ubuntu 20.x) failed on connect Uart CH340/1 while flashing E
 fixed in kernels 5.13.14 and maybe upper 
 (https://cdn.kernel.org/pub/linux/kernel/v5.x/ChangeLog-5.13.14)
 
-Ubuntu 21.x : even worse
-
 ## Todo :
