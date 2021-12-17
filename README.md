@@ -23,7 +23,7 @@
 ![PWM-Control-in-AC11](https://user-images.githubusercontent.com/53934994/140613898-13044e00-b3ac-4ed6-af85-960940436992.jpg)
 
 PCB/Schematic of the Electronic card ... working on version 2,  coming soon...
-![pcb](https://user-images.githubusercontent.com/53934994/146585658-820fab47-7e99-483e-8af0-4b72cec1ef72.png)
+![pcb](https://user-images.githubusercontent.com/53934994/146590687-b24c495c-6670-45d8-85be-4de6d36e0eba.png)
 
  * ESP Board : Wemos d1 mini (CH341 uart), esp8266
    - When choosing GPIO pins to use, it's best to avoid GPIO 0, 2 and 15 (D3, D4, D8)
