@@ -22,7 +22,7 @@
 
 ![PWM-Control-in-AC11](https://user-images.githubusercontent.com/53934994/140613898-13044e00-b3ac-4ed6-af85-960940436992.jpg)
 
-PCB/Schematic of the Electronic card ... coming soon...
+PCB/Schematic of the Electronic card ... working on version 2,  coming soon...
 ![pcb](https://user-images.githubusercontent.com/53934994/146585658-820fab47-7e99-483e-8af0-4b72cec1ef72.png)
 
  * ESP Board : Wemos d1 mini (CH341 uart), esp8266
