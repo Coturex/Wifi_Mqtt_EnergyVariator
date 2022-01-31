@@ -12,7 +12,7 @@
 
 ![vload_AP](https://user-images.githubusercontent.com/53934994/140624657-ae7fd28b-fc34-4558-865f-514c03860ca4.png)
 
-## Hardware requirements:   ~25-28 €
+## Hardware requirements:   ~20-25 €
  * IGBT Power Variator  (homebrew...)
     - no human frequency sound
     - reasonable frequency spurious (vs TRIAC)
