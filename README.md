@@ -3,7 +3,7 @@
 # Wifi_Mqtt_EnergyVariator
  * Adjust 'Power Consumption' of a resistive load (up to 3kW)
  * Data sent to your Domotic Box, raspberry, PC... using an MQTT Broker
- * Listening  Power command received on MQTT topic
+ * Listen  Power command received on MQTT topic
  * Publish Power values on MQTT 'vload topic' and on 'domoticz/in' topic (for Domoticz)
  * Display Power/Percent/Max on mini screen    
 
@@ -38,7 +38,5 @@ some Linux distrib (Ubuntu 20.x) failed on connect Uart CH340/1 while flashing E
      →  "Timed out waiting for packet header"
 fixed in kernels 5.13.14 and maybe upper 
 (https://cdn.kernel.org/pub/linux/kernel/v5.x/ChangeLog-5.13.14)
-
-Ubuntu 21.x : even worse
 
 ## Todo :

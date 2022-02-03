@@ -16,8 +16,8 @@
 
 // Wemos pin use : it's best to avoid GPIO 0, 2 and 15 (D3, D4, D8)
 // D5 : unused 
-// D6 : unused
-// D7 : PWM - IGBT Gate   (1023 Hz)
+// D6 : ZeroCrossing
+// D7 : Triac Dimmer - PWM IGBT Gate   (1023 Hz)
 // D1 : I2C clock - OLED
 // D2 : I2C data  - OLED
 
@@ -28,18 +28,23 @@
 #include <SoftwareSerial.h>     // ESP8266/wemos requirement
 #include <WiFiManager.h>        // Manage Wifi Access Point if wifi connect failure (todo : and mqtt failure)
 
-#define USEOLED // enable OLED mini display
-//#undef USEOLED
-#ifdef USEOLED
+// I2C OLED screen stuff
+#ifdef USE_OLED
 #include "Adafruit_SSD1306.h"   // OLED requirement
 #define OLED_RESET 0  // GPIO0
 Adafruit_SSD1306 display(OLED_RESET); // Wemos I2C : D1-SCL D2-SDA
 #endif
 
-#define USEOTA // enable On The Air firmware flash 
-//#undef USEOTA
-#ifdef USEOTA
+#ifdef USE_OTA
 #include "WebOTA.h"
+#endif
+
+#ifndef USE_IGBT
+#include "RBDdimmerESP8266.h"
+dimmerLampESP8266 dimmer(D7, D6); //initialase port for dimmer(outPin, ZeroCrossing)
+#else
+#include "igbt_pwm_dimmer.h"
+dimmerLampESP8266 dimmer(D7); //initialase port for dimmer(outPin)
 #endif
 
 //#include "myConfig_sample.h"  // Personnal settings - 'gited file'
@@ -77,7 +82,7 @@ struct {
     char idx_power[MAX_STRING_LENGTH] = "";
     char idx_percent[MAX_STRING_LENGTH] = "";
     char power_max[MAX_STRING_LENGTH] = "";
-    bool AP = 0 ;
+    int AP = 0 ;
   } settings;
 
 WiFiManager wm;
@@ -90,7 +95,7 @@ WiFiManagerParameter custom_idx_power("idx_power", "Domoticz idx power", "", 4);
 WiFiManagerParameter custom_idx_percent("idx_volt", "Domoticz idx voltage", "", 4);
 WiFiManagerParameter custom_power_max("power_max", "Maximum load power", "", 4);
 
-#ifdef USEOLED
+#ifdef USE_OLED
 void oled_cls(int size) {
     // OLED : set cursor on top left corner and clear
     display.clearDisplay();
@@ -99,22 +104,6 @@ void oled_cls(int size) {
     display.setCursor(0,0);
 }
 #endif
-
-void saveWifiCallback() { // Save settings to EEPROM
-    unsigned int addr=0 ;
-    Serial.println("[CALLBACK] saveParamCallback fired"); 
-    strncpy(settings.name, custom_name.getValue(), MAX_STRING_LENGTH);  
-    strncpy(settings.mqtt_server, custom_mqtt_server.getValue(), MAX_STRING_LENGTH);  
-    strncpy(settings.mqtt_port, custom_mqtt_port.getValue(), MAX_STRING_LENGTH);  
-    strncpy(settings.vload_topic, custom_vload_topic.getValue(), MAX_STRING_LENGTH);  
-    strncpy(settings.vload_id, custom_vload_id.getValue(), MAX_STRING_LENGTH);  
-    strncpy(settings.idx_power, custom_idx_power.getValue(), MAX_STRING_LENGTH);  
-    strncpy(settings.idx_percent, custom_idx_percent.getValue(), MAX_STRING_LENGTH);  
-    strncpy(settings.power_max, custom_power_max.getValue(), MAX_STRING_LENGTH);  
-    settings.AP = 0 ;
-    EEPROM.put(addr, settings); //write data to array in ram 
-    EEPROM.commit();  //write data from ram to flash memory. Do nothing if there are no changes to EEPROM data in ram
-}
 
 void read_Settings () { // From EEPROM
     unsigned int addr=0 ;  
@@ -131,10 +120,43 @@ void read_Settings () { // From EEPROM
     Serial.println("[READ EEPROM] power_max : " + String(settings.AP) ) ;
 }
 
+void saveWifiCallback() { // Save settings to EEPROM
+    unsigned int addr=0 ;
+    read_Settings() ;
+    Serial.println("[CALLBACK] saveParamCallback fired"); 
+    if (custom_name.getValue()[0] != '.') { 
+        strncpy(settings.name, custom_name.getValue(), MAX_STRING_LENGTH);  
+    }
+    if (custom_mqtt_server.getValue()[0] != '.') { 
+        strncpy(settings.mqtt_server, custom_mqtt_server.getValue(), MAX_STRING_LENGTH);  
+    }
+    if (custom_mqtt_port.getValue()[0] != '.') { 
+        strncpy(settings.mqtt_port, custom_mqtt_port.getValue(), MAX_STRING_LENGTH);  
+    }
+    if (custom_vload_topic.getValue()[0] != '.') { 
+        strncpy(settings.vload_topic, custom_vload_topic.getValue(), MAX_STRING_LENGTH);  
+    }
+    if (custom_vload_id.getValue()[0] != '.') { 
+        strncpy(settings.vload_id, custom_vload_id.getValue(), MAX_STRING_LENGTH);  
+    }
+    if (custom_idx_power.getValue()[0] != '.') { 
+        strncpy(settings.idx_power, custom_idx_power.getValue(), MAX_STRING_LENGTH);  
+    }
+    if (custom_idx_percent.getValue()[0] != '.') { 
+        strncpy(settings.idx_percent, custom_idx_percent.getValue(), MAX_STRING_LENGTH);  
+    }
+    if (custom_power_max.getValue()[0] != '.') { 
+        strncpy(settings.power_max, custom_power_max.getValue(), MAX_STRING_LENGTH);  
+    }
+    settings.AP = 0 ;
+    EEPROM.put(addr, settings); //write data to array in ram 
+    EEPROM.commit();  //write data from ram to flash memory. Do nothing if there are no changes to EEPROM data in ram
+}
+
 void wifi_connect () {
     // Wait for connection (even it's already done)
     while (WiFi.status() != WL_CONNECTED) {
-        #ifdef USEOLED
+        #ifdef USE_OLED
         oled_cls(1);
         display.println("Connecting");
         display.println("wifi");
@@ -150,7 +172,7 @@ void wifi_connect () {
     Serial.println("");
     Serial.print("Connected to Network : ");
     Serial.println(WiFi.localIP());  //IP address assigned to ESP
-    #ifdef USEOLED
+    #ifdef USE_OLED
     oled_cls(1);
     display.println("Wifi on");
     display.println(WiFi.localIP());
@@ -198,9 +220,17 @@ void setup_wifi () {
     else if(TEST_CP or settings.AP) {
         // start configportal always
         delay(1000);
-        Serial.println("AP Config Portal");
         wm.setConfigPortalTimeout(TESP_CP_TIMEOUT);
-        wm.startConfigPortal("req_vload_AP");
+        switch (settings.AP) {
+            case 1: 
+                wm.startConfigPortal("request_vload_AP");
+                Serial.println("AP Config Portal : requested on topic/cmd");
+                break ;
+            case 2:    
+                wm.startConfigPortal("mqtt_vload_AP");
+                Serial.println("AP Config Portal : mqtt connection failure");
+                break ;
+        } 
     }
     else {
         //Here connected to the WiFi
@@ -216,7 +246,7 @@ bool mqtt_connect(int retry) {
         Serial.print("[mqtt_connect] (re)connecting (" + String(retry) + ") ") ;
         retry--;
         Serial.println("[mqtt_connect]"+String(settings.mqtt_server)+":"+String(settings.mqtt_port)) ; 
-        #ifdef USEOLED
+        #ifdef USE_OLED
         oled_cls(1);
         display.println("Connecting");
         display.println("mqtt - (" + String(retry)+")");  
@@ -232,7 +262,6 @@ bool mqtt_connect(int retry) {
             Serial.println("[mqtt_connect] Subscribing : "+ cmdTopic) ; 
             delay(2000);
             mqtt_client.subscribe(cmdTopic.c_str());
-            // sendCurrentPower();
         }
     }
     return ret ;
@@ -253,11 +282,12 @@ void bootPub() {
                 msg += ", \"ip\": ";  
                 msg += WiFi.localIP().toString().c_str() ;
                 msg += "}" ;
-        Serial.print("Sending boot on topic : "); Serial.print(String(settings.vload_topic));
+        if (DEBUG) { Serial.println("Sending Bootstrap on topic : " + String(settings.vload_topic));}
         mqtt_client.publish(String(settings.vload_topic).c_str(), msg.c_str()); 
 }
 
 void domoPub(String idx, float value) {
+    if (idx.toInt() > 0) {
       String msg = "{\"idx\": ";	 // {"idx": 209, "nvalue": 0, "svalue": "2052"}
       msg += idx;
       msg += ", \"nvalue\": 0, \"svalue\": \"";
@@ -265,24 +295,32 @@ void domoPub(String idx, float value) {
       msg += "\"}";
 
       String domTopic = DOMO_TOPIC;             // domoticz topic
+      if (DEBUG) {
+        Serial.println("domoPub on topic : " + domTopic);
+        Serial.println("domoPub : " + msg);
+      }  
       mqtt_client.publish(domTopic.c_str(), msg.c_str()); 
+    }
 }
 
-void statusPub(float percent, float power ) {
+void statusPub() {
     String msg = "{";
     msg += "\"percent\": ";
-    msg += String(percent);
+    msg += String(dimmer.getPower()) ;
     msg += ", \"power\": ";
-    msg += String(power);
+    msg += String("");
     msg += "}";
     String topic = String(settings.vload_topic)+"/"+String(settings.vload_id) ;
-    if (DEBUG) {Serial.print("[statusPub] publishing status on ");Serial.println(String(topic));};
+    if (DEBUG) {
+        Serial.println("statusPub on topic : " + topic);
+        Serial.println("statusPub : " + msg);
+      }
     mqtt_client.publish(String(topic).c_str(), msg.c_str()); 
 } 
 
-void rebootOnAP(){
+void rebootOnAP(int ap){
         Serial.println("Force Rebooting on Acess Point");
-        settings.AP = 1 ;
+        settings.AP = ap ;
         unsigned int addr=0 ;
         EEPROM.put(addr, settings); //write data to array in ram 
         EEPROM.commit();  // write data from ram to flash memory. Do nothing if there are no changes to EEPROM data in ram
@@ -294,24 +332,32 @@ void on_message(char* topic, byte* payload, unsigned int length) {
     char buffer[length+1];
     memcpy(buffer, payload, length);
     buffer[length] = '\0';
-    float p = String(buffer).toFloat();
-    if(p >= 0 && p<=255) {
-        power = p;
-        analogWrite(PWM_PIN, power) ;
-        statusPub(p/254*100,p*100) ;
-    }
-    if(p == 999) {    // Special cmd : AccessPoint is requested - 
-        if (DEBUG) { Serial.println("[on_message] receiving 999 --> restarting on AcessPoint !! "); }
-        rebootOnAP();
+    
+    if (String(buffer) == "bs") { // Bootstrap is requested
+            if (DEBUG) { Serial.println("     Bootstrap resquested") ; } ;
+            bootPub();
+    } else if (String(buffer) == "ap") { // AccessPoint is requested
+            if (DEBUG) { Serial.println("     AccessPoint resquested") ; } ;
+            rebootOnAP(1);
+    } else if (String(buffer) == "reboot") { // Reboot is requested
+            if (DEBUG) { Serial.println("     Reboot resquested") ; } ;
+            ESP.restart(); 
+    } else {
+        float p = String(buffer).toFloat();
+        if (DEBUG) { Serial.println("     Set power to (%) : " + String(p)) ; } ;
+        if(p >= 0 && p<=100) {
+            dimmer.setPower(p) ;
+
+        }
     }
 }
 
 void setup() {  
     randomSeed(micros());  // initializes the pseudo-random number generator
-    pinMode(PWM_PIN, OUTPUT);
     Serial.begin(115200);
-
-    #ifdef USEOLED
+    dimmer.begin(NORMAL_MODE, ON); //dimmer initialisation: name.begin(MODE, STATE) 
+   
+    #ifdef USE_OLED
     // OLED Shield 
     display.begin(SSD1306_SWITCHCAPVCC, 0x3C);  // initialize with the I2C addr 0x3C (for the 64x48)
     display.display();
@@ -333,9 +379,10 @@ void setup() {
     mqtt_client.setServer(settings.mqtt_server, port); // data will be published
     mqtt_client.setCallback(on_message); // subscribing/listening mqtt cmdTopic
     // OTA 
-    #ifdef USEOTA
+    #ifdef USE_OTA
     webota.init(8080,"/update"); // Init WebOTA server 
     #endif
+    statusPub() ;
 }
 
 void loop() {
@@ -345,14 +392,14 @@ void loop() {
     }
     if (!mqtt_client.connected() && WiFi.status() == WL_CONNECTED ) {
         if (mqtt_connect(MQTT_RETRY)) { 
-            bootPub();
+            bootPub() ;
         } else {
-            rebootOnAP();
+            rebootOnAP(2);
         }
     }
     mqtt_client.loop(); // seems it blocks for 100ms
     
-    #ifdef USEOLED
+    #ifdef USE_OLED
     oled_cls(1);
     display.println(String(settings.name));
     display.println("");
@@ -366,17 +413,16 @@ void loop() {
     display.print(" W");
     display.display();
     #endif
-    #ifdef USEOTA
-    webota.handle(); 
+    #ifdef USE_OTA
+    webota.handle();
     webota.delay(100);
     #else
     delay(100) ;
     #endif
 
-    if (false) {
-        Serial.print("loop time (ms) : ") ;
-        Serial.println((millis()-startTime)); // print spare time in loop 
-        delay(10000);
+    if (DEBUG) {
+        //Serial.print("loop time (ms) : ") ;
+        //Serial.println((millis()-startTime)); // print spare time in loop 
         }   
 }
 
