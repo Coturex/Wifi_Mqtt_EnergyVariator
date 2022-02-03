@@ -13,7 +13,7 @@
 ![vload_AP](https://user-images.githubusercontent.com/53934994/140624657-ae7fd28b-fc34-4558-865f-514c03860ca4.png)
 
 ## Hardware requirements:   ~20-25 €
- * TRIAC (Robotdyn Dimmer) OR  IGBT Power Variator  (homebrew...)
+ * [TRIAC (Robotdyn Dimmer)](https://robotdyn.com/dimmer-module-for-16-24a-600v-high-load-1-channel-3-3v-5v-logic.html) OR  IGBT Power Variator  (homebrew...)
  
    IGBT Pros :
     - no human frequency sound
