@@ -12,7 +12,7 @@
 
 ![vload_AP](https://user-images.githubusercontent.com/53934994/140624657-ae7fd28b-fc34-4558-865f-514c03860ca4.png)
 
-## Hardware requirements:   ~25-28 €
+## Hardware requirements:   ~20-25 €
  * IGBT Power Variator  (homebrew...)
     - no human frequency sound
     - reasonable frequency spurious (vs TRIAC)
@@ -20,14 +20,16 @@
       (less overheating )
     - no zero crossing managment
 
-    **→** others like Mosfet, Triac ... can be used but this code need to be implemented anymore
-    
 ![PWM-Control-in-AC11](https://user-images.githubusercontent.com/53934994/140613898-13044e00-b3ac-4ed6-af85-960940436992.jpg)
+
+PCB/Schematic of the Electronic card ... working on version 2,  coming soon...
+![pcb](https://user-images.githubusercontent.com/53934994/146590687-b24c495c-6670-45d8-85be-4de6d36e0eba.png)
 
  * ESP Board : Wemos d1 mini (CH341 uart), esp8266
    - When choosing GPIO pins to use, it's best to avoid GPIO 0, 2 and 15 (D3, D4, D8)
+   - PWM on D5-D6
 
-* Oled Shield 64x48 
+* Oled Shield 64x48 option _(let use 'define' or 'undef' directive in src/main.cpp code)_
    - I2C wired on D1-SCL D2-SDA
 
 * AC-DC 5V 700mA-Small
