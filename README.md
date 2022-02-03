@@ -13,7 +13,9 @@
 ![vload_AP](https://user-images.githubusercontent.com/53934994/140624657-ae7fd28b-fc34-4558-865f-514c03860ca4.png)
 
 ## Hardware requirements:   ~20-25 €
- * IGBT Power Variator  (homebrew...)
+ * TRIAC (Robotdyn Dimmer) OR  IGBT Power Variator  (homebrew...)
+ 
+   IGBT Pros :
     - no human frequency sound
     - reasonable frequency spurious (vs TRIAC)
     - very low resistive on transcient region (_dv/dt_) and can handle more current
@@ -27,7 +29,7 @@ PCB/Schematic of the Electronic card ... working on version 2,  coming soon...
 
  * ESP Board : Wemos d1 mini (CH341 uart), esp8266
    - When choosing GPIO pins to use, it's best to avoid GPIO 0, 2 and 15 (D3, D4, D8)
-   - PWM on D5-D6
+   - IGBT PWM on D7, TRIAC Dimmer D7-D6
 
 * Oled Shield 64x48 option _(let use 'define' or 'undef' directive in src/main.cpp code)_
    - I2C wired on D1-SCL D2-SDA
