@@ -15,11 +15,10 @@
  */
 
 // Wemos pin use : it's best to avoid GPIO 0, 2 and 15 (D3, D4, D8)
-// D5 : unused 
-// D6 : ZeroCrossing
-// D7 : Triac Dimmer - PWM IGBT Gate   (1023 Hz)
 // D1 : I2C clock - OLED
 // D2 : I2C data  - OLED
+// D5 : ZeroCrossing pulse - INPUT
+// D6 : SCR Triac Dimmer - PWM IGBT Gate   (1023 Hz) - OUTPUT
 
 #include <Arduino.h>
 #include <ESP8266WiFi.h>
@@ -35,16 +34,16 @@
 Adafruit_SSD1306 display(OLED_RESET); // Wemos I2C : D1-SCL D2-SDA
 #endif
 
-#ifdef USE_OTA
+#ifndef USE_OTA
 #include "WebOTA.h"
 #endif
 
 #ifndef USE_IGBT
 #include "RBDdimmerESP8266.h"
-dimmerLampESP8266 dimmer(D7, D6); //initialase port for dimmer(outPin, ZeroCrossing)
+dimmerLampESP8266 dimmer(D5, D6); //initialase port for dimmer(outPin, ZeroCrossing)
 #else
 #include "igbt_pwm_dimmer.h"
-dimmerLampESP8266 dimmer(D7); //initialase port for dimmer(outPin)
+dimmerLampESP8266 dimmer(D6); //initialase port for dimmer(outPin)
 #endif
 
 //#include "myConfig_sample.h"  // Personnal settings - 'gited file'
@@ -62,15 +61,17 @@ String outTopic;
 #define MQTT_RETRY 5     // How many retries before starting AccessPoint
 
 //  TEST & DEBUG OPTION FLAGS
+#ifdef NDEBUG
+bool DEBUG = false ;
+#else
 bool DEBUG = true ;
+#endif
 bool TEST_CP         = false; // AP : always start the ConfigPortal, even if ap found
 int  TESP_CP_TIMEOUT = 30;    // AP : AccessPoint timeout and leave AP
-bool ALLOWONDEMAND   = true;  // AP : enable on demand - e.g Trigged on Gpio Input, On Mqtt Msg etc...
 
 // current power (as a percentage of time) : power off at startup.
 float power = 0;
-
-#define PWM_PIN D7
+int previous_percent = 0 ;
 
 #define MAX_STRING_LENGTH 35
 struct { 
@@ -308,7 +309,11 @@ void statusPub() {
     msg += "\"percent\": ";
     msg += String(dimmer.getPower()) ;
     msg += ", \"power\": ";
-    msg += String("");
+    msg += String("tbd");
+    msg += "\"mode\": ";
+    msg += String(dimmer.getMode()) ;
+    msg += "\"state\": ";
+    msg += String(dimmer.getState()) ;
     msg += "}";
     String topic = String(settings.vload_topic)+"/"+String(settings.vload_id) ;
     if (DEBUG) {
@@ -342,12 +347,29 @@ void on_message(char* topic, byte* payload, unsigned int length) {
     } else if (String(buffer) == "reboot") { // Reboot is requested
             if (DEBUG) { Serial.println("     Reboot resquested") ; } ;
             ESP.restart(); 
+    } else if (String(buffer) == "on") {  // Dimmer set state to ON is requested
+            if (DEBUG) { Serial.println("     Dimmer ON resquested") ; } ;
+            dimmer.setState(ON) ;
+    } else if (String(buffer) == "off") { // Dimmer set state to OFF is requested
+            if (DEBUG) { Serial.println("     Dimmer OFF resquested") ; } ;
+            dimmer.setState(OFF) ;
+    } else if (String(buffer) == "status") { // Status is requested
+            if (DEBUG) { Serial.println("     Status resquested") ; } ;
+            statusPub();
     } else {
         float p = String(buffer).toFloat();
         if (DEBUG) { Serial.println("     Set power to (%) : " + String(p)) ; } ;
         if(p >= 0 && p<=100) {
+            /*
+            if ((p - previous_percent) > 10) {
+                dimmer.setMode(SMOUTH_MODE);
+                // dimmer.toggleSettings(0,100);
+            } else {
+                dimmer.setMode(NORMAL_MODE);
+            }
+            */
             dimmer.setPower(p) ;
-
+            previous_percent = p ;
         }
     }
 }
@@ -355,7 +377,7 @@ void on_message(char* topic, byte* payload, unsigned int length) {
 void setup() {  
     randomSeed(micros());  // initializes the pseudo-random number generator
     Serial.begin(115200);
-    dimmer.begin(NORMAL_MODE, ON); //dimmer initialisation: name.begin(MODE, STATE) 
+    dimmer.begin(NORMAL_MODE, OFF); //dimmer initialisation: name.begin(MODE, STATE) 
    
     #ifdef USE_OLED
     // OLED Shield 
@@ -382,6 +404,8 @@ void setup() {
     #ifdef USE_OTA
     webota.init(8080,"/update"); // Init WebOTA server 
     #endif
+    dimmer.setState(ON) ;
+    dimmer.setPower(0) ;
     statusPub() ;
 }
 
