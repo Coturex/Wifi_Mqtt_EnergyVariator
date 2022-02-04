@@ -20,6 +20,8 @@
 // D5 : ZeroCrossing pulse - INPUT
 // D6 : SCR Triac Dimmer - PWM IGBT Gate   (1023 Hz) - OUTPUT
 
+#define FW_VERSION "1.0"
+
 #include <Arduino.h>
 #include <ESP8266WiFi.h>
 #include <WiFiClient.h>
@@ -34,7 +36,7 @@
 Adafruit_SSD1306 display(OLED_RESET); // Wemos I2C : D1-SCL D2-SDA
 #endif
 
-#ifndef USE_OTA
+#ifdef USE_OTA
 #include "WebOTA.h"
 #endif
 
@@ -50,7 +52,6 @@ dimmerLampESP8266 dimmer(D6); //initialase port for dimmer(outPin)
 //#include "myConfig.h"           // Personnal settings - Not 'gited file'
 #include <EEPROM.h>             // EEPROM access...
 
-#define FW_VERSION "1.0"
 #define DOMO_TOPIC "domoticz/in"
 
 // WiFi + MQTT stuff.
@@ -156,16 +157,21 @@ void saveWifiCallback() { // Save settings to EEPROM
 
 void wifi_connect () {
     // Wait for connection (even it's already done)
+    int wifi_retry = 300 ; // retries during 5 min 
+
     while (WiFi.status() != WL_CONNECTED) {
         #ifdef USE_OLED
         oled_cls(1);
         display.println("Connecting");
-        display.println("wifi");
+        display.println("wifi (" + String(wifi_retry)+")");  
         display.display();
         #endif
-        delay(250);
         Serial.print(".");
-        delay(250);
+        delay(1000); // 1s
+        wifi_retry --;
+        if (wifi_retry < 0) { // wifi timeout 
+            ESP.restart() ;
+        }
     }
 
     Serial.println("");
@@ -213,23 +219,27 @@ void setup_wifi () {
 
     //sets timeout until configuration portal gets turned off
     //useful to make it all retry or go to sleep in seconds
-    wm.setConfigPortalTimeout(120);
+    #define AP_TIMEOUT 60
+        //wm.setConnectTimeout(AP_TIMEOUT);
     WiFi.printDiag(Serial);
-    if(!wm.autoConnect("vload_AP","admin")) {
-        Serial.println("failed to connect and hit timeout");
+    String ap_name = "vload_AP_" + String(settings.vload_id) ;
+    if(!wm.autoConnect(ap_name.c_str(),"admin")) {
+        Serial.println("AP : " + ap_name +"- no connection, timeout");
     } 
     else if(TEST_CP or settings.AP) {
         // start configportal always
         delay(1000);
-        wm.setConfigPortalTimeout(TESP_CP_TIMEOUT);
+        wm.setConfigPortalTimeout(AP_TIMEOUT); // run AccessPoint for .. s
         switch (settings.AP) {
             case 1: 
-                wm.startConfigPortal("request_vload_AP");
+                ap_name = "req_vload_AP_" +String(settings.vload_id) ;
                 Serial.println("AP Config Portal : requested on topic/cmd");
+                wm.startConfigPortal(ap_name.c_str()) ;
                 break ;
             case 2:    
-                wm.startConfigPortal("mqtt_vload_AP");
+                ap_name = "mqtt_vload_AP_" +String(settings.vload_id) ;
                 Serial.println("AP Config Portal : mqtt connection failure");
+                wm.startConfigPortal(ap_name.c_str()) ;
                 break ;
         } 
     }
