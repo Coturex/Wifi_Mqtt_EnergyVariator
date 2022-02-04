@@ -1,5 +1,3 @@
-# **this project is on going...**
-
 # Wifi_Mqtt_EnergyVariator
  * Adjust 'Power Consumption' of a resistive load (up to 3kW)
  * Data sent to your Domotic Box, raspberry, PC... using an MQTT Broker
@@ -21,11 +19,6 @@
     - very low resistive on transcient region (_dv/dt_) and can handle more current
       (less overheating )
     - no zero crossing managment
-
-![PWM-Control-in-AC11](https://user-images.githubusercontent.com/53934994/140613898-13044e00-b3ac-4ed6-af85-960940436992.jpg)
-
-PCB/Schematic of the Electronic card ... working on version 2,  coming soon...
-![pcb](https://user-images.githubusercontent.com/53934994/146590687-b24c495c-6670-45d8-85be-4de6d36e0eba.png)
 
  * ESP Board : Wemos d1 mini (CH341 uart), esp8266
    - When choosing GPIO pins to use, it's best to avoid GPIO 0, 2 and 15 (D3, D4, D8)
