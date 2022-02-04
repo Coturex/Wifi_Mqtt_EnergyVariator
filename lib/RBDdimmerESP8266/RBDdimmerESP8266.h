@@ -8,7 +8,7 @@
 typedef enum
 {
     NORMAL_MODE = 0,
-    TOGGLE_MODE = 1
+    SMOUTH_MODE = 1
 } DIMMER_MODE_typedef;
 
 typedef enum

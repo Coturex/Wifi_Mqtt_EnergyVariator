@@ -133,7 +133,7 @@ void dimmerLampESP8266::toggleSettings(int minValue, int maxValue)
 	{
     	minValue = 1;
 	}
-	dimMode[this->current_num] = TOGGLE_MODE;
+	dimMode[this->current_num] = SMOUTH_MODE;
 	togMin[this->current_num] = powerBuf[maxValue];
 	togMax[this->current_num] = powerBuf[minValue];
 
@@ -161,7 +161,7 @@ void ICACHE_RAM_ATTR onTimerISR()
 		{
 			dimCounter[k]++;
 
-			if (dimMode[k] == TOGGLE_MODE)
+			if (dimMode[k] == SMOUTH_MODE)
 			{
 			/*****
 			 * TOGGLE DIMMING MODE
@@ -184,7 +184,7 @@ void ICACHE_RAM_ATTR onTimerISR()
 			}
 			
 			/*****
-			 * DEFAULT DIMMING MODE (NOT TOGGLE)
+			 * DEFAULT DIMMING MODE (NOT TOGGLE/SMOUTH)
 			 *****/
 			if (dimCounter[k] >= dimPulseBegin[k] )
 			{
