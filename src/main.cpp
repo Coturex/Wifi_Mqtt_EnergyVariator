@@ -122,8 +122,13 @@ void read_Settings () { // From EEPROM
     Serial.println("[READ EEPROM] power_max : " + String(settings.AP) ) ;
 }
 
-void saveWifiCallback() { // Save settings to EEPROM
+void write_Settings() { // write to EEPROM
     unsigned int addr=0 ;
+    EEPROM.put(addr, settings); //write data to array in ram 
+    EEPROM.commit();  // write data from ram to flash memory. Do nothing if there are no changes to EEPROM data in ram
+}
+
+void saveWifiCallback() { // Save settings to EEPROM
     read_Settings() ;
     Serial.println("[CALLBACK] saveParamCallback fired"); 
     if (custom_name.getValue()[0] != '.') { 
@@ -151,8 +156,7 @@ void saveWifiCallback() { // Save settings to EEPROM
         strncpy(settings.power_max, custom_power_max.getValue(), MAX_STRING_LENGTH);  
     }
     settings.AP = 0 ;
-    EEPROM.put(addr, settings); //write data to array in ram 
-    EEPROM.commit();  //write data from ram to flash memory. Do nothing if there are no changes to EEPROM data in ram
+    write_Settings() ;
 }
 
 void wifi_connect () {
@@ -219,12 +223,12 @@ void setup_wifi () {
 
     //sets timeout until configuration portal gets turned off
     //useful to make it all retry or go to sleep in seconds
-    #define AP_TIMEOUT 60
+    int AP_TIMEOUT = 60 ;
         //wm.setConnectTimeout(AP_TIMEOUT);
     WiFi.printDiag(Serial);
-    String ap_name = "vload_AP_" + String(settings.vload_id) ;
-    if(!wm.autoConnect(ap_name.c_str(),"admin")) {
-        Serial.println("AP : " + ap_name +"- no connection, timeout");
+    String apName = "vload_AP_" + String(settings.vload_id) ;
+    if(!wm.autoConnect(apName.c_str(),"admin")) {
+        Serial.println("AP : " + apName +"- no connection, timeout");
     } 
     else if(TEST_CP or settings.AP) {
         // start configportal always
@@ -232,14 +236,22 @@ void setup_wifi () {
         wm.setConfigPortalTimeout(AP_TIMEOUT); // run AccessPoint for .. s
         switch (settings.AP) {
             case 1: 
-                ap_name = "req_vload_AP_" +String(settings.vload_id) ;
+                apName = "req_vload_AP_" +String(settings.vload_id) ;
                 Serial.println("AP Config Portal : requested on topic/cmd");
-                wm.startConfigPortal(ap_name.c_str()) ;
+                wm.startConfigPortal(apName.c_str()) ;
+                Serial.println("---- End of request-AP") ;
+                settings.AP = 0 ;   
+                write_Settings();
+                ESP.restart() ;
                 break ;
             case 2:    
-                ap_name = "mqtt_vload_AP_" +String(settings.vload_id) ;
+                apName = "mqtt_vload_AP_" +String(settings.vload_id) ;
                 Serial.println("AP Config Portal : mqtt connection failure");
-                wm.startConfigPortal(ap_name.c_str()) ;
+                wm.startConfigPortal(apName.c_str()) ;
+                Serial.println("---- End of mqtt-AP") ;
+                settings.AP = 0 ;
+                write_Settings();                
+                ESP.restart() ;
                 break ;
         } 
     }
@@ -334,12 +346,10 @@ void statusPub() {
 } 
 
 void rebootOnAP(int ap){
-        Serial.println("Force Rebooting on Acess Point");
-        settings.AP = ap ;
-        unsigned int addr=0 ;
-        EEPROM.put(addr, settings); //write data to array in ram 
-        EEPROM.commit();  // write data from ram to flash memory. Do nothing if there are no changes to EEPROM data in ram
-        ESP.restart();    // call AP directly doesn't works cleanly, a reboot is needed
+    Serial.println("Force Rebooting on Acess Point");
+    settings.AP = ap ;
+    write_Settings() ;    
+    ESP.restart();
 }
 
 void on_message(char* topic, byte* payload, unsigned int length) {
