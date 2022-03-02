@@ -226,7 +226,8 @@ void setup_wifi () {
     int AP_TIMEOUT = 60 ;
         //wm.setConnectTimeout(AP_TIMEOUT);
     WiFi.printDiag(Serial);
-    String apName = "vload_AP_" + String(settings.vload_id) ;
+    Serial.println("chip id :" + String(ESP.getChipId()));
+    String apName = "vload_AP_" + String(ESP.getChipId()) ;
     if(!wm.autoConnect(apName.c_str(),"admin")) {
         Serial.println("AP : " + apName +"- no connection, timeout");
     } 
@@ -296,6 +297,8 @@ void bootPub() {
                 msg += "\"" + String(settings.vload_id) + "\"" ;
                 msg += ", \"fw_version\": ";
                 msg += "\"" + String(FW_VERSION) + "\"" ;
+                msg += ", \"chip_id\": ";
+                msg += "\"" + String(ESP.getChipId()) + "\"" ;
                 msg += ", \"vload_version\": ";
                 msg += "\"v3.0\"" ;
                 msg += ", \"vload_idx1\": ";
@@ -397,7 +400,7 @@ void on_message(char* topic, byte* payload, unsigned int length) {
 void setup() {  
     randomSeed(micros());  // initializes the pseudo-random number generator
     Serial.begin(115200);
-    dimmer.begin(NORMAL_MODE, OFF); //dimmer initialisation: name.begin(MODE, STATE) 
+    // dimmer.begin(NORMAL_MODE, OFF); //dimmer initialisation: name.begin(MODE, STATE) 
    
     #ifdef USE_OLED
     // OLED Shield 
@@ -424,9 +427,9 @@ void setup() {
     #ifdef USE_OTA
     webota.init(8080,"/update"); // Init WebOTA server 
     #endif
-    dimmer.setState(ON) ;
-    dimmer.setPower(0) ;
-    statusPub() ;
+  //  dimmer.setState(ON) ;
+   // dimmer.setPower(0) ;
+   statusPub() ;
 }
 
 void loop() {
