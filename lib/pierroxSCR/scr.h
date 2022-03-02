@@ -19,18 +19,19 @@ class scrDimmer
         void call_later(unsigned long duration_us, void(*callback)(void)) ;
 
         // timer interrupt routine : call the function which gas been registered earlier (see call_later)
-        void ICACHE_RAM_ATTR onTimerISR();
+        void ICACHE_RAM_ATTR onTimerISR(void);
 
         // called at the end of the pulse
-        void onPulseEnd();
+        void onPulseEnd(void);
 
         // called when the delay after the zero crossing has expired
-        void onDelayExpired() ;
+        void onDelayExpired(void) ;
 
         // pin ZERO interrupt routine
-        void onZero() ;
-        
+        void onZero(void) ;
+    
     public:   
-        void begin() ;
+        void scrDimmer(void) ;
+        void begin(void) ;
    
 };

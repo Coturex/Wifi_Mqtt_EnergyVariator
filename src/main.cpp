@@ -41,9 +41,10 @@ Adafruit_SSD1306 display(OLED_RESET); // Wemos I2C : D1-SCL D2-SDA
 #endif
 
 #ifndef USE_IGBT
-#include "RBDdimmerESP8266.h"
+//#include "RBDdimmerESP8266.h"
+#include "scr.h"
 //dimmerLamp dimmer(D5, D6); //initialase port for dimmer(outPin, ZeroCrossing)
-dimmerLampESP8266 dimmer(D5, D6); //initialase port for dimmer(outPin, ZeroCrossing)
+//dimmerLampESP8266 dimmer(D5, D6); //initialase port for dimmer(outPin, ZeroCrossing)
 #else
 #include "igbt_pwm_dimmer.h"
 dimmerLampESP8266 dimmer(D6); //initialase port for dimmer(outPin)

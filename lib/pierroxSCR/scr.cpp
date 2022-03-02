@@ -37,7 +37,7 @@ void scrDimmer::onDelayExpired(void) {
     // generate a pulse (below 50% this is a short pulse, above the pulse has a 3ms duration)
     digitalWrite(PIN_SCR, HIGH);
 
-    call_later(power < 50 ? 5 : 3000, onPulseEnd);
+    call_later(power < 50 ? 5 : 3000, this->onPulseEnd());
 }
 
 // pin ZERO interrupt routine
