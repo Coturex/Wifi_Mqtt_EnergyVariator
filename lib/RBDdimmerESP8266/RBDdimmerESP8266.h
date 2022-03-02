@@ -33,7 +33,7 @@ static const uint8_t powerBuf[] = {
 #define ALL_DIMMERS 100
 
 void handleInterrupt(void);
-void ICACHE_RAM_ATTR onTimerISR();
+void IRAM_ATTR onTimerISR();
 
 class dimmerLampESP8266 
 {         
@@ -65,5 +65,7 @@ class dimmerLampESP8266
         DIMMER_MODE_typedef getMode(void);
         void toggleSettings(int minValue, int maxValue);  
 };
+void isr_ext(void);
+void IRAM_ATTR onTimerISR();
 
 #endif

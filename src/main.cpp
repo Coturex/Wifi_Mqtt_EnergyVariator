@@ -42,11 +42,13 @@ Adafruit_SSD1306 display(OLED_RESET); // Wemos I2C : D1-SCL D2-SDA
 
 #ifndef USE_IGBT
 #include "RBDdimmerESP8266.h"
+//dimmerLamp dimmer(D5, D6); //initialase port for dimmer(outPin, ZeroCrossing)
 dimmerLampESP8266 dimmer(D5, D6); //initialase port for dimmer(outPin, ZeroCrossing)
 #else
 #include "igbt_pwm_dimmer.h"
 dimmerLampESP8266 dimmer(D6); //initialase port for dimmer(outPin)
 #endif
+
 
 //#include "myConfig_sample.h"  // Personnal settings - 'gited file'
 //#include "myConfig.h"           // Personnal settings - Not 'gited file'
@@ -68,7 +70,6 @@ bool DEBUG = false ;
 bool DEBUG = true ;
 #endif
 bool TEST_CP         = false; // AP : always start the ConfigPortal, even if ap found
-int  TESP_CP_TIMEOUT = 30;    // AP : AccessPoint timeout and leave AP
 
 // current power (as a percentage of time) : power off at startup.
 float power = 0;
@@ -400,7 +401,7 @@ void on_message(char* topic, byte* payload, unsigned int length) {
 void setup() {  
     randomSeed(micros());  // initializes the pseudo-random number generator
     Serial.begin(115200);
-    // dimmer.begin(NORMAL_MODE, OFF); //dimmer initialisation: name.begin(MODE, STATE) 
+    dimmer.begin(NORMAL_MODE, OFF); //dimmer initialisation: name.begin(MODE, STATE) 
    
     #ifdef USE_OLED
     // OLED Shield 
@@ -433,7 +434,7 @@ void setup() {
 }
 
 void loop() {
-    unsigned long startTime = millis();
+    // unsigned long startTime = millis();
     if (WiFi.status() != WL_CONNECTED) {
         wifi_connect();
     }

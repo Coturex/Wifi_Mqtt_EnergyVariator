@@ -151,7 +151,7 @@ void handleInterrupt()
 
 
 static int k;
-void ICACHE_RAM_ATTR onTimerISR()
+void IRAM_ATTR onTimerISR()
 {	
 	
 	toggleCounter++;
