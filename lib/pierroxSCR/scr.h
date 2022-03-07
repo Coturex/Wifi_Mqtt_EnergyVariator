@@ -7,31 +7,26 @@
 #define PIN_ZERO D6
 #define PIN_SCR D5
 
+// current power (as a percentage of time) : power off at startup.
 
-class scrDimmer 
-{         
-    private:
-        // current power (as a percentage of time) : power off at startup.
-        int power ;
-        // this function pointer is used to store the next timer action (see call_later and onTimerISR below)
-        void (*timer_callback)(void);
+extern float power ;
 
-        void call_later(unsigned long duration_us, void(*callback)(void)) ;
+// this function pointer is used to store the next timer action (see call_later and onTimerISR below)
+// void (*timer_callback)(void);
 
-        // timer interrupt routine : call the function which gas been registered earlier (see call_later)
-        void ICACHE_RAM_ATTR onTimerISR(void);
 
-        // called at the end of the pulse
-        void onPulseEnd(void);
+extern void call_later(unsigned long duration_us, void(*callback)(void)) ;
 
-        // called when the delay after the zero crossing has expired
-        void onDelayExpired(void) ;
+// timer interrupt routine : call the function which gas been registered earlier (see call_later)
+extern void IRAM_ATTR onTimerISR();
 
-        // pin ZERO interrupt routine
-        void onZero(void) ;
-    
-    public:   
-        void scrDimmer(void) ;
-        void begin(void) ;
-   
-};
+// called at the end of the pulse
+void onPulseEnd() ;
+
+// called when the delay after the zero crossing has expired
+void onDelayExpired() ;
+
+// pin ZERO interrupt routine
+void onZero();
+
+void setupISR();

@@ -40,16 +40,33 @@ Adafruit_SSD1306 display(OLED_RESET); // Wemos I2C : D1-SCL D2-SDA
 #include "WebOTA.h"
 #endif
 
+float power = 0 ;
+
 #ifndef USE_IGBT
-#include "RBDdimmerESP8266.h"
-//#include "scr.h"
+//#include "RBDdimmerESP8266.h"
+#include "scr.h"
+// this function pointer is used to store the next timer action (see call_later and onTimerISR below)
+void (*timer_callback)(void);
+void call_later(unsigned long duration_us, void(*callback)(void)) {
+    timer_callback = callback;
+    // 5 ticks/us
+    timer1_write(duration_us * 5);
+}
+// timer interrupt routine : call the function which gas been registered earlier (see call_later)
+void IRAM_ATTR onTimerISR(){
+    void (*f)(void) = timer_callback;
+    timer_callback = NULL;
+    if(f) {
+        f();
+    }
+}
+
 //dimmerLamp dimmer(D5, D6); //initialase port for dimmer(outPin, ZeroCrossing)
-dimmerLampESP8266 dimmer(D5, D6); //initialase port for dimmer(outPin, ZeroCrossing)
+//dimmerLampESP8266 dimmer(D5, D6); //initialase port for dimmer(outPin, ZeroCrossing)
 #else
 #include "igbt_pwm_dimmer.h"
 dimmerLampESP8266 dimmer(D6); //initialase port for dimmer(outPin)
 #endif
-
 
 //#include "myConfig_sample.h"  // Personnal settings - 'gited file'
 //#include "myConfig.h"           // Personnal settings - Not 'gited file'
@@ -72,8 +89,6 @@ bool DEBUG = true ;
 #endif
 bool TEST_CP         = false; // AP : always start the ConfigPortal, even if ap found
 
-// current power (as a percentage of time) : power off at startup.
-float power = 0;
 int previous_percent = 0 ;
 
 #define MAX_STRING_LENGTH 35
@@ -334,13 +349,13 @@ void domoPub(String idx, float value) {
 void statusPub() {
     String msg = "{";
     msg += "\"percent\": ";
-    msg += String(dimmer.getPower()) ;
+    // msg += String(dimmer.getPower()) ;
     msg += ", \"power\": ";
     msg += String("tbd");
     msg += "\"mode\": ";
-    msg += String(dimmer.getMode()) ;
+    // msg += String(dimmer.getMode()) ;
     msg += "\"state\": ";
-    msg += String(dimmer.getState()) ;
+    //msg += String(dimmer.getState()) ;
     msg += "}";
     String topic = String(settings.vload_topic)+"/"+String(settings.vload_id) ;
     if (DEBUG) {
@@ -374,10 +389,10 @@ void on_message(char* topic, byte* payload, unsigned int length) {
             ESP.restart(); 
     } else if (String(buffer) == "on") {  // Dimmer set state to ON is requested
             if (DEBUG) { Serial.println("     Dimmer ON resquested") ; } ;
-            dimmer.setState(ON) ;
+            //dimmer.setState(ON) ;
     } else if (String(buffer) == "off") { // Dimmer set state to OFF is requested
             if (DEBUG) { Serial.println("     Dimmer OFF resquested") ; } ;
-            dimmer.setState(OFF) ;
+            //dimmer.setState(OFF) ;
     } else if (String(buffer) == "status") { // Status is requested
             if (DEBUG) { Serial.println("     Status resquested") ; } ;
             statusPub();
@@ -393,7 +408,7 @@ void on_message(char* topic, byte* payload, unsigned int length) {
                 dimmer.setMode(NORMAL_MODE);
             }
             */
-            dimmer.setPower(p) ;
+            //dimmer.setPower(p) ;
             previous_percent = p ;
         }
     }
@@ -402,7 +417,7 @@ void on_message(char* topic, byte* payload, unsigned int length) {
 void setup() {  
     randomSeed(micros());  // initializes the pseudo-random number generator
     Serial.begin(115200);
-    dimmer.begin(NORMAL_MODE, OFF); //dimmer initialisation: name.begin(MODE, STATE) 
+    //dimmer.begin(NORMAL_MODE, OFF); //dimmer initialisation: name.begin(MODE, STATE) 
    
     #ifdef USE_OLED
     // OLED Shield 
@@ -432,10 +447,11 @@ void setup() {
   //  dimmer.setState(ON) ;
    // dimmer.setPower(0) ;
    statusPub() ;
+   setupISR() ;
 }
 
 void loop() {
-    // unsigned long startTime = millis();
+    unsigned long startTime = millis();
     if (WiFi.status() != WL_CONNECTED) {
         wifi_connect();
     }
@@ -470,8 +486,8 @@ void loop() {
     #endif
 
     if (DEBUG) {
-        //Serial.print("loop time (ms) : ") ;
-        //Serial.println((millis()-startTime)); // print spare time in loop 
+        Serial.print("loop time (ms) : ") ;
+        Serial.println((millis()-startTime)); // print spare time in loop 
         }   
 }
 
