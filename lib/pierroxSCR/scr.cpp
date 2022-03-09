@@ -15,6 +15,7 @@ void onDelayExpired() {
 
     call_later(power < 50 ? 5 : 3000, onPulseEnd);
 }
+void IRAM_ATTR onZero ();
 
 // pin ZERO interrupt routine
 void onZero() {

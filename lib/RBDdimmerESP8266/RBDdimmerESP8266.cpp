@@ -62,7 +62,7 @@ void dimmerLampESP8266::ext_int_init(void)
 {
 	int inPin = dimZCPin[this->current_num];
 	pinMode(inPin, INPUT_PULLUP);
-	attachInterrupt(inPin, handleInterrupt, FALLING);
+	attachInterrupt(inPin, handleInterrupt, RISING);
 }
 
 
@@ -140,7 +140,7 @@ void dimmerLampESP8266::toggleSettings(int minValue, int maxValue)
 	toggleReload = 50;
 }
  
-void handleInterrupt()
+void IRAM_ATTR handleInterrupt()
 {
 	for (int i = 0; i < current_dim; i++ ) 
 		if (dimState[i] == ON) 

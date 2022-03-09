@@ -53,7 +53,7 @@ void call_later(unsigned long duration_us, void(*callback)(void)) {
     timer1_write(duration_us * 5);
 }
 // timer interrupt routine : call the function which gas been registered earlier (see call_later)
-void ICACHE_RAM_ATTR onTimerISR(){
+void IRAM_ATTR onTimerISR(){
     void (*f)(void) = timer_callback;
     timer_callback = NULL;
     if(f) {

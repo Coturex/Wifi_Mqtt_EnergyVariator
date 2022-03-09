@@ -65,7 +65,4 @@ class dimmerLampESP8266
         DIMMER_MODE_typedef getMode(void);
         void toggleSettings(int minValue, int maxValue);  
 };
-void isr_ext(void);
-void IRAM_ATTR onTimerISR();
-
 #endif
