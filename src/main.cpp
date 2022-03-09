@@ -40,10 +40,15 @@ Adafruit_SSD1306 display(OLED_RESET); // Wemos I2C : D1-SCL D2-SDA
 #include "WebOTA.h"
 #endif
 
-float power = 0 ;
+float percent_power = 0 ;
 
 #ifndef USE_IGBT
 //#include "RBDdimmerESP8266.h"
+
+// these pins are used to connect to the SCR
+int PIN_ZERO=D6 ;
+int PIN_SCR=D5 ;
+
 #include "scr.h"
 // this function pointer is used to store the next timer action (see call_later and onTimerISR below)
 void (*timer_callback)(void);
@@ -398,8 +403,8 @@ void on_message(char* topic, byte* payload, unsigned int length) {
             statusPub();
     } else {
         float p = String(buffer).toFloat();
-        if (DEBUG) { Serial.println("     Set power to (%) : " + String(p)) ; } ;
         if(p >= 0 && p<=100) {
+            if (DEBUG) { Serial.println("     Set power to (%) : " + String(p)) ; } ;
             /*
             if ((p - previous_percent) > 10) {
                 dimmer.setMode(SMOUTH_MODE);
@@ -409,7 +414,8 @@ void on_message(char* topic, byte* payload, unsigned int length) {
             }
             */
             //dimmer.setPower(p) ;
-            previous_percent = p ;
+            previous_percent = percent_power ;
+            percent_power = p ;
         }
     }
 }
@@ -485,7 +491,7 @@ void loop() {
     delay(100) ;
     #endif
 
-    if (DEBUG) {
+    if (false) {
         Serial.print("loop time (ms) : ") ;
         Serial.println((millis()-startTime)); // print spare time in loop 
         }   

@@ -7,8 +7,8 @@
     ISR reads the value on GPIO4 and changes the state of the BUILTIN led based on the value read
     */
 
-const byte pin5 = D5;
-const byte pin4 = D4;
+const byte pin5 = D6;
+const byte pin4 = D5;
 
 void IRAM_ATTR ISRoutine ();
 
