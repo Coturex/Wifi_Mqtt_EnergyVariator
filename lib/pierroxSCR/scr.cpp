@@ -4,6 +4,21 @@
 bool DEBUG_ISR = false ;
 int SCR_PULSE_WIDTH = 3 ; // ms
 
+// this function pointer is used to store the next timer action (see call_later and onTimerISR below)
+void (*timer_callback)(void);
+void call_later(unsigned long duration_us, void(*callback)(void)) {
+    timer_callback = callback;
+    // 5 ticks/us
+    timer1_write(duration_us * 5);
+}
+// timer interrupt routine : call the function which gas been registered earlier (see call_later)
+void IRAM_ATTR onTimerISR(){
+    void (*f)(void) = timer_callback;
+    timer_callback = NULL;
+    if(f) {
+        f();
+    }
+}
 // called at the end of the pulse
 void onPulseEnd() {
     if (DEBUG_ISR){Serial.println("SCR Low on pin :" + String(PIN_SCR));} ;

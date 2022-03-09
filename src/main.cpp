@@ -41,36 +41,19 @@ Adafruit_SSD1306 display(OLED_RESET); // Wemos I2C : D1-SCL D2-SDA
 #endif
 
 float percent_power = 0 ;
-
-#ifndef USE_IGBT
-//#include "RBDdimmerESP8266.h"
+float previous_percent = 0 ;
 
 // these pins are used to connect to the SCR
-int PIN_ZERO=D6 ;
-int PIN_SCR=D5 ;
+int PIN_ZERO=D5 ;
+int PIN_SCR=D6 ;
 
+#ifdef USE_SCR
 #include "scr.h"
-// this function pointer is used to store the next timer action (see call_later and onTimerISR below)
-void (*timer_callback)(void);
-void call_later(unsigned long duration_us, void(*callback)(void)) {
-    timer_callback = callback;
-    // 5 ticks/us
-    timer1_write(duration_us * 5);
-}
-// timer interrupt routine : call the function which gas been registered earlier (see call_later)
-void IRAM_ATTR onTimerISR(){
-    void (*f)(void) = timer_callback;
-    timer_callback = NULL;
-    if(f) {
-        f();
-    }
-}
-
-//dimmerLamp dimmer(D5, D6); //initialase port for dimmer(outPin, ZeroCrossing)
-//dimmerLampESP8266 dimmer(D5, D6); //initialase port for dimmer(outPin, ZeroCrossing)
-#else
+#elif USE_RBD
+#include "RBDdimmerESP8266.h"
+dimmerLampESP8266 dimmer(D5, D6); //initialase port for dimmer(outPin, ZeroCrossing)
+#elif USE_IGBT
 #include "igbt_pwm_dimmer.h"
-dimmerLampESP8266 dimmer(D6); //initialase port for dimmer(outPin)
 #endif
 
 //#include "myConfig_sample.h"  // Personnal settings - 'gited file'
@@ -93,8 +76,6 @@ bool DEBUG = false ;
 bool DEBUG = true ;
 #endif
 bool TEST_CP         = false; // AP : always start the ConfigPortal, even if ap found
-
-int previous_percent = 0 ;
 
 #define MAX_STRING_LENGTH 35
 struct { 
@@ -196,6 +177,7 @@ void wifi_connect () {
         delay(1000); // 1s
         wifi_retry --;
         if (wifi_retry < 0) { // wifi timeout 
+            Serial.println("Resetting due to Wifi timeout...");
             ESP.restart() ;
         }
     }
@@ -265,6 +247,7 @@ void setup_wifi () {
                 Serial.println("---- End of request-AP") ;
                 settings.AP = 0 ;   
                 write_Settings();
+                Serial.println("Resetting due to AP MQTT request...");
                 ESP.restart() ;
                 break ;
             case 2:    
@@ -273,7 +256,8 @@ void setup_wifi () {
                 wm.startConfigPortal(apName.c_str()) ;
                 Serial.println("---- End of mqtt-AP") ;
                 settings.AP = 0 ;
-                write_Settings();                
+                write_Settings();    
+                Serial.println("Resetting due to AP MQTT request...");
                 ESP.restart() ;
                 break ;
         } 
@@ -355,8 +339,8 @@ void statusPub() {
     String msg = "{";
     msg += "\"percent\": ";
     // msg += String(dimmer.getPower()) ;
+    msg += String(percent_power);
     msg += ", \"power\": ";
-    msg += String("tbd");
     msg += "\"mode\": ";
     // msg += String(dimmer.getMode()) ;
     msg += "\"state\": ";
@@ -374,14 +358,15 @@ void rebootOnAP(int ap){
     Serial.println("Force Rebooting on Acess Point");
     settings.AP = ap ;
     write_Settings() ;    
+    Serial.println("Resetting due to rebootOnAP...");
     ESP.restart();
 }
 
 void on_message(char* topic, byte* payload, unsigned int length) {
-    if (DEBUG) { Serial.print("[on_message] receiving msg on "); Serial.println(String(topic));}; 
     char buffer[length+1];
     memcpy(buffer, payload, length);
     buffer[length] = '\0';
+    if (DEBUG) { Serial.println("[on_message] receiving msg on "+String(topic)+" : "+String(buffer));}; 
     
     if (String(buffer) == "bs") { // Bootstrap is requested
             if (DEBUG) { Serial.println("     Bootstrap resquested") ; } ;
@@ -391,13 +376,14 @@ void on_message(char* topic, byte* payload, unsigned int length) {
             rebootOnAP(1);
     } else if (String(buffer) == "reboot") { // Reboot is requested
             if (DEBUG) { Serial.println("     Reboot resquested") ; } ;
+            Serial.println("Resetting due to MQTT Reboot request...");
             ESP.restart(); 
-    } else if (String(buffer) == "on") {  // Dimmer set state to ON is requested
-            if (DEBUG) { Serial.println("     Dimmer ON resquested") ; } ;
-            //dimmer.setState(ON) ;
-    } else if (String(buffer) == "off") { // Dimmer set state to OFF is requested
-            if (DEBUG) { Serial.println("     Dimmer OFF resquested") ; } ;
-            //dimmer.setState(OFF) ;
+    } else if (String(buffer) == "on") {  // Power set state to ON is requested
+            if (DEBUG) { Serial.println("     Power ON resquested") ; } ;
+            percent_power = 100 ;
+    } else if (String(buffer) == "off") { // Power set state to OFF is requested
+            if (DEBUG) { Serial.println("     Power OFF resquested") ; } ;
+            percent_power = 0 ;
     } else if (String(buffer) == "status") { // Status is requested
             if (DEBUG) { Serial.println("     Status resquested") ; } ;
             statusPub();
@@ -413,9 +399,13 @@ void on_message(char* topic, byte* payload, unsigned int length) {
                 dimmer.setMode(NORMAL_MODE);
             }
             */
-            //dimmer.setPower(p) ;
             previous_percent = percent_power ;
+            #ifdef USE_RBD
+            dimmer.setPower(p) ;
+            #elif USE_SRC
             percent_power = p ;
+            #endif
+
         }
     }
 }
@@ -423,7 +413,6 @@ void on_message(char* topic, byte* payload, unsigned int length) {
 void setup() {  
     randomSeed(micros());  // initializes the pseudo-random number generator
     Serial.begin(115200);
-    //dimmer.begin(NORMAL_MODE, OFF); //dimmer initialisation: name.begin(MODE, STATE) 
    
     #ifdef USE_OLED
     // OLED Shield 
@@ -453,7 +442,11 @@ void setup() {
   //  dimmer.setState(ON) ;
    // dimmer.setPower(0) ;
    statusPub() ;
+   #ifdef USE_RBD
+   dimmer.begin(NORMAL_MODE, ON); //dimmer initialisation: name.begin(MODE, STATE) 
+   #elif USE_SCR
    setupISR() ;
+   #endif
 }
 
 void loop() {
