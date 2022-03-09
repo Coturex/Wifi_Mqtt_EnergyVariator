@@ -37,5 +37,7 @@ void setupISR() {
     timer1_enable(TIM_DIV16, TIM_EDGE, TIM_SINGLE); // 5 ticks/us
     
     // listen for change on the pin ZERO
-    attachInterrupt(digitalPinToInterrupt(PIN_ZERO), onZero, CHANGE);
+    //attachInterrupt(digitalPinToInterrupt(PIN_ZERO), onZero, CHANGE);  // Pierrox's SCR has  zero detect trigger on CHANGE state
+    attachInterrupt(digitalPinToInterrupt(PIN_ZERO), onZero, RISING);    // my SCR has zero detect on 1ms pulse -> on RISING state
+
 }

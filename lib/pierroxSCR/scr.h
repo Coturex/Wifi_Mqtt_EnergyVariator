@@ -18,7 +18,7 @@ extern float power ;
 extern void call_later(unsigned long duration_us, void(*callback)(void)) ;
 
 // timer interrupt routine : call the function which gas been registered earlier (see call_later)
-extern void IRAM_ATTR onTimerISR();
+extern void ICACHE_RAM_ATTR onTimerISR();
 
 // called at the end of the pulse
 void onPulseEnd() ;
