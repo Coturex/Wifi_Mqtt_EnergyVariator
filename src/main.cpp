@@ -56,8 +56,6 @@ dimmerLampESP8266 dimmer(D5, D6); //initialase port for dimmer(outPin, ZeroCross
 #include "igbt_pwm_dimmer.h"
 #endif
 
-//#include "myConfig_sample.h"  // Personnal settings - 'gited file'
-//#include "myConfig.h"           // Personnal settings - Not 'gited file'
 #include <EEPROM.h>             // EEPROM access...
 
 #define DOMO_TOPIC "domoticz/in"
@@ -338,13 +336,25 @@ void domoPub(String idx, float value) {
 void statusPub() {
     String msg = "{";
     msg += "\"percent\": ";
-    // msg += String(dimmer.getPower()) ;
+    #ifdef USE_SCR
     msg += String(percent_power);
+    #elif USE_RBD
+    msg += String(dimmer.getPower()) ;
+    #elif USE_IGBT
+    #endif
     msg += ", \"power\": ";
     msg += "\"mode\": ";
-    // msg += String(dimmer.getMode()) ;
+    #ifdef USE_SCR
+    #elif USE_RBD
+    msg += String(dimmer.getMode()) ;
+    #elif USE_IGBT
+    #endif
     msg += "\"state\": ";
-    //msg += String(dimmer.getState()) ;
+    #ifdef USE_SCR
+    #elif USE_RBD
+    msg += String(dimmer.getState()) ;
+    #elif USE_IGBT
+    #endif
     msg += "}";
     String topic = String(settings.vload_topic)+"/"+String(settings.vload_id) ;
     if (DEBUG) {
