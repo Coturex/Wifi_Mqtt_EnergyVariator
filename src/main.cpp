@@ -412,7 +412,7 @@ void on_message(char* topic, byte* payload, unsigned int length) {
             previous_percent = percent_power ;
             #ifdef USE_RBD
             dimmer.setPower(p) ;
-            #elif USE_SRC
+            #elif USE_SCR
             percent_power = p ;
             #endif
 
@@ -454,8 +454,11 @@ void setup() {
     dimmer.begin(NORMAL_MODE, ON); //dimmer initialisation: name.begin(MODE, STATE) 
     dimmer.setState(ON) ;
     dimmer.setPower(50) ;
+    Serial.println("Using RBD Algorithm");
     #elif USE_SCR
     setupISR() ;
+    percent_power = 50 ;
+    Serial.println("Using SCR Algorithm");
     #endif
 }
 
