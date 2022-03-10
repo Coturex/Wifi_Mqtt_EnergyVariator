@@ -44,14 +44,14 @@ float percent_power = 0 ;
 float previous_percent = 0 ;
 
 // these pins are used to connect to the SCR
-int PIN_ZERO=D5 ;
-int PIN_SCR=D6 ;
+int PIN_ZERO=D6 ;
+int PIN_SCR=D5 ;
 
 #ifdef USE_SCR
 #include "scr.h"
 #elif USE_RBD
 #include "RBDdimmerESP8266.h"
-dimmerLampESP8266 dimmer(D5, D6); //initialase port for dimmer(outPin, ZeroCrossing)
+dimmerLampESP8266 dimmer(PIN_SCR, PIN_ZERO); //initialase port for dimmer(outPin, ZeroCrossing)
 #elif USE_IGBT
 #include "igbt_pwm_dimmer.h"
 #endif
@@ -73,7 +73,7 @@ bool DEBUG = false ;
 #else
 bool DEBUG = true ;
 #endif
-bool TEST_CP         = false; // AP : always start the ConfigPortal, even if ap found
+bool TEST_CP = false; // AP : always start the ConfigPortal, even if ap found
 
 #define MAX_STRING_LENGTH 35
 struct { 
@@ -449,14 +449,14 @@ void setup() {
     #ifdef USE_OTA
     webota.init(8080,"/update"); // Init WebOTA server 
     #endif
-  //  dimmer.setState(ON) ;
-   // dimmer.setPower(0) ;
-   statusPub() ;
-   #ifdef USE_RBD
-   dimmer.begin(NORMAL_MODE, ON); //dimmer initialisation: name.begin(MODE, STATE) 
-   #elif USE_SCR
-   setupISR() ;
-   #endif
+    statusPub() ;
+    #ifdef USE_RBD
+    dimmer.begin(NORMAL_MODE, ON); //dimmer initialisation: name.begin(MODE, STATE) 
+    dimmer.setState(ON) ;
+    dimmer.setPower(50) ;
+    #elif USE_SCR
+    setupISR() ;
+    #endif
 }
 
 void loop() {
