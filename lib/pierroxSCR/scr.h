@@ -12,25 +12,20 @@ extern int PIN_ZERO ;
 extern int PIN_SCR ;
 
 // current power (as a percentage of time) : power off at startup.
-
 extern float percent_power ;
 
-// this function pointer is used to store the next timer action (see call_later and onTimerISR below)
-// void (*timer_callback)(void);
-
-
-extern void call_later(unsigned long duration_us, void(*callback)(void)) ;
+// pin ZERO interrupt routine
+void onZero(void);
 
 // timer interrupt routine : call the function which gas been registered earlier (see call_later)
-extern void IRAM_ATTR onTimerISR();
+void IRAM_ATTR onTimerISR();
 
 // called at the end of the pulse
-void onPulseEnd() ;
+void pulseEnd() ;
 
 // called when the delay after the zero crossing has expired
-void onDelayExpired() ;
+void pulseStart() ;
 
-// pin ZERO interrupt routine
-void IRAM_ATTR onZero();
+
 
 void setupISR();

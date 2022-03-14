@@ -17,8 +17,8 @@
 // Wemos pin use : it's best to avoid GPIO 0, 2 and 15 (D3, D4, D8)
 // D1 : I2C clock - OLED
 // D2 : I2C data  - OLED
-// D5 : ZeroCrossing pulse - INPUT
-// D6 : SCR Triac Dimmer - PWM IGBT Gate   (1023 Hz) - OUTPUT
+// D5 : SCR Triac Dimmer - PWM IGBT Gate   (1023 Hz) - OUTPUT
+// D6 : ZeroCrossing pulse - INPUT
 
 #define FW_VERSION "1.0"
 
@@ -226,6 +226,7 @@ void setup_wifi () {
     //sets timeout until configuration portal gets turned off
     //useful to make it all retry or go to sleep in seconds
     int AP_TIMEOUT = 60 ;
+    wm.setTimeout(AP_TIMEOUT) ;
         //wm.setConnectTimeout(AP_TIMEOUT);
     WiFi.printDiag(Serial);
     Serial.println("chip id :" + String(ESP.getChipId()));
