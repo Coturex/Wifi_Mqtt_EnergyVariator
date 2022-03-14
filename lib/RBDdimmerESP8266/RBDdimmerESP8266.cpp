@@ -61,7 +61,8 @@ void dimmerLampESP8266::timer_init(void)
 void dimmerLampESP8266::ext_int_init(void) 
 {
 	int inPin = dimZCPin[this->current_num];
-	pinMode(inPin, INPUT_PULLUP);
+	//pinMode(inPin, INPUT_PULLUP);
+	pinMode(inPin, INPUT);
 	attachInterrupt(inPin, handleInterrupt, RISING);
 }
 
