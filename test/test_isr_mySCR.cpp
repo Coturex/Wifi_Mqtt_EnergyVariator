@@ -10,32 +10,16 @@
 // these pins are used to connect to the SCR
 int PIN_ZERO=D6 ;
 int PIN_SCR=D5 ;
-#include "scr.h"
 
-float percent_power = 0 ;
+#include "mySCR.h"
 
-// this function pointer is used to store the next timer action (see call_later and onTimerISR below)
-void (*timer_callback)(void);
-void call_later(unsigned long duration_us, void(*callback)(void)) {
-    timer_callback = callback;
-    // 5 ticks/us
-    timer1_write(duration_us * 5);
-}
-// timer interrupt routine : call the function which gas been registered earlier (see call_later)
-void IRAM_ATTR onTimerISR(){
-    void (*f)(void) = timer_callback;
-    timer_callback = NULL;
-    if(f) {
-        f();
-    }
-}
-
-
-const byte pin5 = D5;
+dimSCR dimmer(PIN_SCR, PIN_ZERO); //initialise port for dimmer(outPin, ZeroCrossing)
 
 void setup () {
-Serial.begin(115200);
-setupISR();
+    Serial.begin(115200);
+    dimmer.begin(NORMAL_MODE, ON); //dimmer initialisation: name.begin(MODE, STATE) 
+    dimmer.setState(ON) ;
+    dimmer.setPower(70) ;
 }
 
 void loop () {
@@ -46,11 +30,11 @@ void loop () {
     }
     int inValue = Serial.parseInt();
     if(inValue >= 0 && inValue<=100) {
-        percent_power = inValue ;
+        dimmer.setPower(inValue) ;
     }
     //Serial.print("loop time (ms) : ") ;
     //Serial.println((millis()-startTime)); // print spare time in loop 
     Serial.print("percent_power : ") ;
-    Serial.println(String(percent_power));
+    Serial.println(String(dimmer.getPower()));
 }
 
