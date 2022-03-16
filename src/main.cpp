@@ -47,14 +47,15 @@ float previous_percent = 0 ;
 int PIN_ZERO=D6 ;
 int PIN_SCR=D5 ;
 
-#ifdef USE_SCR
-#include "scr.h"
-#elif USE_RBD
+#ifdef USE_MYSCR
+#include "mySCR.h"
+dimSCR dimmer(PIN_SCR, PIN_ZERO); //initialise port for dimmer(outPin, ZeroCrossing)
+String algo = "mySCR" ;
+#else
 #include "RBDdimmerESP8266.h"
-dimmerLampESP8266 dimmer(PIN_SCR, PIN_ZERO); //initialase port for dimmer(outPin, ZeroCrossing)
-#elif USE_IGBT
-#include "igbt_pwm_dimmer.h"
-#endif
+dimmerLampESP8266 dimmer(PIN_SCR, PIN_ZERO); //initialise port for dimmer(outPin, ZeroCrossing)
+String algo = "RBD_SCR";
+#endif 
 
 #include <EEPROM.h>             // EEPROM access...
 
@@ -63,6 +64,7 @@ dimmerLampESP8266 dimmer(PIN_SCR, PIN_ZERO); //initialase port for dimmer(outPin
 // WiFi + MQTT stuff.
 WiFiClient espClient ;
 PubSubClient mqtt_client(espClient);  
+
 String cmdTopic;
 String outTopic;
 #define MQTT_RETRY 5     // How many retries before starting AccessPoint
@@ -341,25 +343,12 @@ void domoPub(String idx, float value) {
 void statusPub() {
     String msg = "{";
     msg += "\"percent\": ";
-    #ifdef USE_SCR
-    msg += String(percent_power);
-    #elif USE_RBD
     msg += String(dimmer.getPower()) ;
-    #elif USE_IGBT
-    #endif
     msg += ", \"power\": ";
     msg += "\"mode\": ";
-    #ifdef USE_SCR
-    #elif USE_RBD
     msg += String(dimmer.getMode()) ;
-    #elif USE_IGBT
-    #endif
     msg += "\"state\": ";
-    #ifdef USE_SCR
-    #elif USE_RBD
     msg += String(dimmer.getState()) ;
-    #elif USE_IGBT
-    #endif
     msg += "}";
     String topic = String(settings.vload_topic)+"/"+String(settings.vload_id) ;
     if (DEBUG) {
@@ -415,12 +404,7 @@ void on_message(char* topic, byte* payload, unsigned int length) {
             }
             */
             previous_percent = percent_power ;
-            #ifdef USE_RBD
             dimmer.setPower(p) ;
-            #elif USE_SCR
-            percent_power = p ;
-            #endif
-
         }
     }
 }
@@ -455,16 +439,10 @@ void setup() {
     webota.init(8080,"/update"); // Init WebOTA server 
     #endif
     statusPub() ;
-    #ifdef USE_RBD
     dimmer.begin(NORMAL_MODE, ON); //dimmer initialisation: name.begin(MODE, STATE) 
     dimmer.setState(ON) ;
     dimmer.setPower(50) ;
-    Serial.println("Using RBD Algorithm");
-    #elif USE_SCR
-    setupISR() ;
-    percent_power = 50 ;
-    Serial.println("Using SCR Algorithm");
-    #endif
+    Serial.println("Using Algorithm : " + algo);
 }
 
 void loop() {

@@ -16,7 +16,7 @@ typedef enum
 void onZero(void);
 void IRAM_ATTR onTimerISR();
 
-class dimmerLampESP8266 
+class dimSCR 
 {         
     private:
         int current_num;
@@ -24,13 +24,15 @@ class dimmerLampESP8266
 		void port_init(void);
 		void timer_init(void);
 		void ext_int_init(void);
-		
+    	void pulseStart(void);
+		void pulseEnd(void);
+
     public:   
         uint16_t pulse_begin;
         int dimmer_pin;
         int zc_pin;
 
-        dimmerLampESP8266(int user_dimmer_pin, int zc_dimmer_pin);
+        dimSCR(int user_dimmer_pin, int zc_dimmer_pin);
         void begin(DIMMER_MODE_typedef DIMMER_MODE, ON_OFF_typedef ON_OFF);
         void setPower(int power);
 		int  getPower(void);
