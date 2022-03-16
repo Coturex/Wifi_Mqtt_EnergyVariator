@@ -225,12 +225,16 @@ void setup_wifi () {
 
     //sets timeout until configuration portal gets turned off
     //useful to make it all retry or go to sleep in seconds
+    String apName ;
     int AP_TIMEOUT = 60 ;
     wm.setTimeout(AP_TIMEOUT) ;
         //wm.setConnectTimeout(AP_TIMEOUT);
     WiFi.printDiag(Serial);
-    Serial.println("chip id :" + String(ESP.getChipId()));
-    String apName = "vload_AP_" + String(ESP.getChipId()) ;
+    if (String(settings.name).isEmpty()){
+        apName = "vload_AP_" + String(ESP.getChipId()) ;
+    } else {
+        apName = "vload_AP_" + String(settings.name) ;
+    }
     if(!wm.autoConnect(apName.c_str(),"admin")) {
         Serial.println("AP : " + apName +"- no connection, timeout");
     } 
