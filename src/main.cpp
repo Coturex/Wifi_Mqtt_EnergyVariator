@@ -235,7 +235,7 @@ void setup () {
     outTopic = String(settings.topic) + "/" + String(settings.name) ;         //e.g topic :regul/vload/id-00/
     cmdTopic = outTopic + "/cmd" ;
 
-    mqtt_client.setServer(settings.mqtt_server, 1883); // data will be published
+    mqtt_client.setServer(settings.mqtt_server, settings.mqtt_port); // data will be published
     mqtt_client.setCallback(on_message); // subscribing/listening mqtt cmdTopic
     
     dimmer.begin(NORMAL_MODE, ON); //dimmer initialisation: name.begin(MODE, STATE) 
@@ -261,28 +261,40 @@ void loop_manuelle () {
 
 }
 
-void reconnect() {
-    while (!mqtt_client.connected()) {
+bool reconnect_mqtt(int retry) {
+    bool ret = false ;
+    while (!mqtt_client.connected() && WiFi.status() == WL_CONNECTED && retry) {
         String clientId = "scr-";
+        if (DEBUG) { 
+            Serial.print("[reconnect_mqtt] (re)connecting (" + String(retry) + ") ") ;
+            Serial.println("[reconnect_mqtt]"+String(settings.mqtt_server)+":"+String(settings.mqtt_port)) ; 
+        } ;
+
+        retry-- ;
         clientId += String(settings.name);
         if (mqtt_client.connect(clientId.c_str())) {
+            ret = true ;
             mqtt_client.subscribe(cmdTopic.c_str());
             if (DEBUG) { Serial.println("Subscribing topic : " + String(cmdTopic));}
-
         } else {
+            ret = false ;
             delay(5000);
         }
     }
+    return ret ;
 }
 
 void loop() {
     if (!mqtt_client.connected()) {
-        reconnect();
+        if (!reconnect_mqtt(10)) { 
+            ESP.restart() ;
+        } ;
     }
     mqtt_client.loop(); // seems it blocks for 100ms
     
     if (boot_detected) { 
         bootPub() ;
+        statusPub();
         boot_detected = false ;
     }
     // DO NOT USE DELAY FUNCTION IN THIS LOOP
