@@ -59,6 +59,7 @@ int dimSCR::getPower(void)
 void dimSCR::setState(ON_OFF_typedef ON_OFF)
 {
 	dimState = ON_OFF;
+	dimPower = 0 ;
 }
 
 bool dimSCR::getState(void)
@@ -104,16 +105,18 @@ void pulseStart(void) { // called when the delay after the zero crossing has exp
 void IRAM_ATTR onZero()
 {
     if (DEBUG_ISR){Serial.println("[RBD] DETECT Zero pulse on pin : " + String(dimZCPin));} ;
-    if(dimPower > 0) {
-        // generate a pulse after this zero
-        // power=100%: no wait, power=0%: wait 10ms
-      unsigned long delay = dimPower==100 ? 10 : (100-dimPower)*100;
-      if (dimPower <= SCR_PULSE_WIDTH) {
-          delay = (100-SCR_PULSE_WIDTH-1)*100 ;
-      }
-      timer1_write(delay * 5);
-      pulse = false ;
-    }
+	if (dimState == ON) {
+    	if(dimPower > 0) {
+        	// generate a pulse after this zero
+        	// power=100%: no wait, power=0%: wait 10ms
+    	  	unsigned long delay = dimPower==100 ? 10 : (100-dimPower)*100;
+	    	if (dimPower <= SCR_PULSE_WIDTH) {
+          		delay = (100-SCR_PULSE_WIDTH-1)*100 ;
+	      	}
+      		timer1_write(delay * 5);
+      		pulse = false ;
+    	}
+	}
 }
 
 void IRAM_ATTR onTimerISR()

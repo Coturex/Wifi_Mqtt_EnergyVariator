@@ -4,7 +4,8 @@
 
 int dim_tim[10];
 int dim_max[10];
-int timeoutPin = 435; // 80us
+//int timeoutPin = 435; // 80us
+int timeoutPin = 470; 
 int extIntPin = 2; //z-c
 
 int pulseWidth = 1;
