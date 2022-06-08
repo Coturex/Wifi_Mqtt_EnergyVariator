@@ -3,9 +3,9 @@
  * Data sent to your Domotic Box, raspberry, PC... using an MQTT Broker
  * Listen  Power command received on MQTT topic
  * Publish Power values on MQTT 'vload topic' 
- * WebOTA : On The Air firmware update
-
- URL : http://<pzem_ip>:8080/update
+ * WebOTA : On The Air firmware update on mqtt command ('ota' -> topic/cmd)
+  
+   URL : http://<pzem_ip>:8080/update
     
 
 ## Hardware requirements:   ~20 €

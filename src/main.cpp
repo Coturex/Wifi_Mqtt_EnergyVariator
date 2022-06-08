@@ -37,6 +37,7 @@ int PIN_ZERO=D6 ;
 #include "WebOTA.h"
 #endif
 
+
 //  TEST & DEBUG OPTION FLAGS
 #ifdef NDEBUG
 bool DEBUG = false ;
@@ -119,14 +120,19 @@ void bootPub() {
                 msg += "\"" + String(FW_VERSION) + "\"" ;
                 msg += ", \"chip_id\": ";
                 msg += "\"" + String(ESP.getChipId()) + "\"" ;
-                msg += ", \"ip\": ";  
+                msg += ", \"ip\": \"";  
                 msg += WiFi.localIP().toString().c_str() ;
+                #ifdef USE_OTA
+                msg += "\", \"OTA\": \"mqtt\""; 
+                #else
+                msg += ", \"OTA\": \"no\""; 
+                #endif
                 msg += "}" ;
         if (DEBUG) { Serial.println("Sending Bootstrap on topic : " + String(bootTopic));}
         mqtt_client.publish(String(bootTopic).c_str(), msg.c_str()); 
 }
 
-void statusPub() {
+void statusPub(String message) {
     String msg = "{";
     msg += "\"percent\": ";
     msg += String(dimmer.getPower()) ;
@@ -135,7 +141,9 @@ void statusPub() {
     msg += String(dimmer.getMode()) ;
     msg += ", \"state\": ";
     msg += String(dimmer.getState()) ;
-    msg += "}";
+    msg += ", \"msg\": \"";
+    msg += String(message) ;    
+    msg += "\"}";
     if (DEBUG) {
         Serial.println("statusPub on topic : " + outTopic);
         Serial.println("statusPub : " + msg);
@@ -155,6 +163,20 @@ void on_message(char* topic, byte* payload, unsigned int length) {
     } else if (String(buffer) == "ap") { // AccessPoint is requested
             if (DEBUG) { Serial.println("     AccessPoint resquested - not implemented") ; } ;
             //rebootOnAP(1);
+    } else if (String(buffer) == "ota") { // OTA is requested
+            #ifdef USE_OTA
+            decltype(millis()) last = millis();
+            if (DEBUG) { Serial.println("     OTA requested") ; } ;
+            statusPub("OTA listenning") ;
+	        while ((millis() - last) < 30000) {    
+                webota.handle(); 
+                webota.delay(1000);    
+            }
+            // delay(5000);
+            // statusPub("OTA timeout") ;
+            if (DEBUG) { Serial.println("     OTA timeout") ; } ;          
+            #endif
+
     } else if (String(buffer) == "reboot") { // Reboot is requested
             if (DEBUG) { Serial.println("     Reboot resquested") ; } ;
             Serial.println("Resetting due to MQTT Reboot request...");
@@ -167,7 +189,7 @@ void on_message(char* topic, byte* payload, unsigned int length) {
             dimmer.setState(OFF) ;
     } else if (String(buffer) == "status") { // Status is requested
             if (DEBUG) { Serial.println("     Status resquested") ; } ;
-            statusPub();
+            statusPub("");
     } else {
         float p = String(buffer).toFloat();
         if(p >= 0 && p<=100) {
@@ -182,7 +204,7 @@ void on_message(char* topic, byte* payload, unsigned int length) {
             */
             previous_percent = p ;
             dimmer.setPower(p) ;
-            statusPub();
+            statusPub("");
         }
     }
 }
@@ -207,24 +229,6 @@ void setup () {
     dimmer.begin(NORMAL_MODE, ON); //dimmer initialisation: name.begin(MODE, STATE) 
     // dimmer.setState(ON) ;
     // dimmer.setPower(70) ;
-}
-
-void loop_manuelle () {
-    //unsigned long startTime = millis();
-    //delay(5000) ;
-    Serial.println("Power % [0-100] ? : ");
-    while (Serial.available() == 0) {
-    }
-    int inValue = Serial.parseInt();
-    if(inValue >= 0 && inValue<=100) {
-        dimmer.setPower(inValue) ;
-    }
-    //Serial.print("loop time (ms) : ") ;
-    //Serial.println((millis()-startTime)); // print spare time in loop 
-    Serial.print("percent_power : ") ;
-    Serial.println(String(dimmer.getPower()));
-
-
 }
 
 bool reconnect_mqtt(int retry) {
@@ -260,15 +264,10 @@ void loop() {
     
     if (boot_detected) { 
         bootPub() ;
-        statusPub();
+        statusPub("");
         boot_detected = false ;
     }
     // DO NOT USE DELAY FUNCTION IN THIS LOOP
-    // OTHERWI IT WILL OCCURED AN ESP RESET - CONFLICT w/ ISR INTERUPT timer1_write
-   #ifdef USE_OTA
-    webota.handle(); 
-    webota.delay(500);
-    #endif
+    // OTHERWISE IT WILL OCCURED AN ESP RESET - CONFLICT w/ ISR INTERUPT timer1_write
+    // then OTA is not possible in this loop !!
 }
-
-
