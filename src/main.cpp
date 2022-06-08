@@ -19,14 +19,14 @@
 // D5 : SCR Triac Dimmer - PWM IGBT Gate   (1023 Hz) - OUTPUT
 // D6 : ZeroCrossing pulse - INPUT
 
-#define FW_VERSION "1.0"
+#define FW_VERSION "1.0a"
 
 #include <Arduino.h>
 #include <ESP8266WiFi.h>
 #include <WiFiClient.h>
 #include <PubSubClient.h>       // Mqtt lib
 
-#include "mySCR_green_pcb.h"
+#include "mySCR.h"
 #include "myConfig.h"         // WiFi and MQTT settings in this header : NOT 'Gited'
 
 // these pins are used to connect to the SCR
@@ -34,7 +34,7 @@ int PIN_SCR=D5 ;
 int PIN_ZERO=D6 ;
 
 #ifdef USE_OTA
-#include <ArduinoOTA.h>
+#include "WebOTA.h"
 #endif
 
 //  TEST & DEBUG OPTION FLAGS
@@ -119,8 +119,6 @@ void bootPub() {
                 msg += "\"" + String(FW_VERSION) + "\"" ;
                 msg += ", \"chip_id\": ";
                 msg += "\"" + String(ESP.getChipId()) + "\"" ;
-                msg += ", \"vload_version\": ";
-                msg += "\"" + String(FW_VERSION) + "\"" ;
                 msg += ", \"ip\": ";  
                 msg += WiFi.localIP().toString().c_str() ;
                 msg += "}" ;
@@ -196,39 +194,7 @@ void setup () {
     setup_wifi() ;
     delay(5000) ;
     #ifdef USE_OTA
-    // https://github.com/esp8266/Arduino/blob/master/libraries/ArduinoOTA/examples/BasicOTA/BasicOTA.ino
-    ArduinoOTA.onStart([]() {
-    String type;
-    if (ArduinoOTA.getCommand() == U_FLASH) {
-      type = "sketch";
-    } else {  // U_FS
-      type = "filesystem";
-    }
-
-    // NOTE: if updating FS this would be the place to unmount FS using FS.end()
-    Serial.println("Start updating " + type);
-    });
-    ArduinoOTA.onEnd([]() {
-        Serial.println("\nEnd");
-    });
-    ArduinoOTA.onProgress([](unsigned int progress, unsigned int total) {
-        Serial.printf("Progress: %u%%\r", (progress / (total / 100)));
-    });
-    ArduinoOTA.onError([](ota_error_t error) {
-        Serial.printf("Error[%u]: ", error);
-        if (error == OTA_AUTH_ERROR) {
-          Serial.println("Auth Failed");
-        } else if (error == OTA_BEGIN_ERROR) {
-          Serial.println("Begin Failed");
-        } else if (error == OTA_CONNECT_ERROR) {
-            Serial.println("Connect Failed");
-        } else if (error == OTA_RECEIVE_ERROR) {
-            Serial.println("Receive Failed");
-        } else if (error == OTA_END_ERROR) {
-        Serial.println("End Failed");
-        }
-    });
-    ArduinoOTA.begin();
+    webota.init(8080,"/update"); // Init WebOTA server
     #endif
     
     bootTopic = String(settings.topic) ;
@@ -299,11 +265,10 @@ void loop() {
     }
     // DO NOT USE DELAY FUNCTION IN THIS LOOP
     // OTHERWI IT WILL OCCURED AN ESP RESET - CONFLICT w/ ISR INTERUPT timer1_write
-    #ifdef USE_OTA
-    ArduinoOTA.handle();
+   #ifdef USE_OTA
+    webota.handle(); 
+    webota.delay(500);
     #endif
-
-
 }
 
 

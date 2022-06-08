@@ -1,0 +1,7 @@
+SCR.Gnd  -> wemos.Gnd
+SCR.Zero -> wemos.D6
+SCR.Scr  -> wemos.D5
+SCR.5V   -> nc
+
+ACDC.+ -> wemos.5v
+ACDC.- -> wemos.Gnd

@@ -1,13 +1,19 @@
 
 #include <Arduino.h>
-#include "mySCR_white_pcb.h"
+#include "mySCR.h"
 
 static bool pulse = false ;
 bool DEBUG_ISR = false ;
 
 #define TICKS 5 // 5 ticks/us
 int SCR_PULSE_WIDTH = 1 ; // 1 ms
+
+#ifdef USE_MYSCR_GREEN_PCB
+bool reverse_pulse = true ;
+#else
 bool reverse_pulse = false ;
+#endif
+
 volatile int current_dim = 0;
 char user_zero_cross = '0';
 
@@ -77,8 +83,11 @@ void pulseStart(void) { // called when the delay after the zero crossing has exp
 		digitalWrite(dimOutPin, LOW);
 	}
     if (DEBUG_ISR){Serial.println("[RBD] SCR high on pin :" + String(dimOutPin));} ;
+	#ifdef USE_MYSCR_GREEN_PCB
+	call_later(10, pulseEnd);
+	#else
 	call_later(dimPower < 50 ? 5 : 3000, pulseEnd);
-	//call_later(10, pulseEnd);
+	#endif
 }
 
 void IRAM_ATTR onZero()
@@ -88,6 +97,7 @@ void IRAM_ATTR onZero()
     	if(dimPower > 0) {
 			 // generate a pulse after this zero
         	// power=100%: no wait, power=0%: wait 10ms
+        	//unsigned long delay = dimPower==100 ? 30 : (100-dimPower)*100;
         	unsigned long delay = dimPower==100 ? 30 : (100-dimPower)*100;
         	call_later(delay, pulseStart);
     	}
