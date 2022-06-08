@@ -26,7 +26,7 @@
 #include <WiFiClient.h>
 #include <PubSubClient.h>       // Mqtt lib
 
-#include "mySCR.h"
+#include "mySCR_green_pcb.h"
 #include "myConfig.h"         // WiFi and MQTT settings in this header : NOT 'Gited'
 
 // these pins are used to connect to the SCR

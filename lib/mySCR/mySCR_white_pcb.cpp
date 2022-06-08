@@ -1,6 +1,6 @@
 
 #include <Arduino.h>
-#include "mySCR.h"
+#include "mySCR_white_pcb.h"
 
 static bool pulse = false ;
 bool DEBUG_ISR = false ;
@@ -78,6 +78,7 @@ void pulseStart(void) { // called when the delay after the zero crossing has exp
 	}
     if (DEBUG_ISR){Serial.println("[RBD] SCR high on pin :" + String(dimOutPin));} ;
 	call_later(dimPower < 50 ? 5 : 3000, pulseEnd);
+	//call_later(10, pulseEnd);
 }
 
 void IRAM_ATTR onZero()
