@@ -19,7 +19,7 @@
 // D5 : SCR Triac Dimmer - PWM IGBT Gate   (1023 Hz) - OUTPUT
 // D6 : ZeroCrossing pulse - INPUT
 
-#define FW_VERSION "1.0a"
+#define FW_VERSION "1.0b"
 
 #include <Arduino.h>
 #include <ESP8266WiFi.h>
@@ -165,15 +165,11 @@ void on_message(char* topic, byte* payload, unsigned int length) {
             //rebootOnAP(1);
     } else if (String(buffer) == "ota") { // OTA is requested
             #ifdef USE_OTA
-            decltype(millis()) last = millis();
-            if (DEBUG) { Serial.println("     OTA requested") ; } ;
-            statusPub("OTA listenning") ;
-	        while ((millis() - last) < 30000) {    
-                webota.handle(); 
-                webota.delay(1000);    
-            }
-            // delay(5000);
-            // statusPub("OTA timeout") ;
+           if (DEBUG) { Serial.println("     OTA requested") ; } ;
+            statusPub("OTA requested") ;
+	        webota.handle(); 
+            webota.delay(30000);    
+            //statusPub("OTA timeout") ;
             if (DEBUG) { Serial.println("     OTA timeout") ; } ;          
             #endif
 
