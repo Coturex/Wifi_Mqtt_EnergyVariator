@@ -227,40 +227,52 @@ void setup () {
     // dimmer.setPower(70) ;
 }
 
-bool reconnect_mqtt(int retry) {
+bool mqtt_connect(int retry) {
     bool ret = false ;
     while (!mqtt_client.connected() && WiFi.status() == WL_CONNECTED && retry) {
-        String clientId = "scr-";
-        if (DEBUG) { 
-            Serial.print("[reconnect_mqtt] (re)connecting (" + String(retry) + ") ") ;
-            Serial.println("[reconnect_mqtt]"+String(settings.mqtt_server)+":"+String(settings.mqtt_port)) ; 
-        } ;
-
-        retry-- ;
-        clientId += String(settings.name);
-        if (mqtt_client.connect(clientId.c_str())) {
-            ret = true ;
-            mqtt_client.subscribe(cmdTopic.c_str());
-            if (DEBUG) { Serial.println("Subscribing topic : " + String(cmdTopic));}
-        } else {
+        String clientId = "pzem-"+String(settings.pzem_id);
+        Serial.print("[mqtt_connect] (re)connecting (" + String(retry) + " left) ") ;
+        retry--;
+        Serial.println("[mqtt_connect]"+String(settings.mqtt_server)+":"+String(settings.mqtt_port)) ; 
+        #ifdef USE_OLED
+        oled_cls(1);
+        display.println("Connecting");
+        display.println("mqtt (" + String(retry)+")");  
+        //display.println("idx_p :" + String (settings.idx_power) );
+        //display.println("idx_v :" + String (settings.idx_voltage) );
+        display.display();
+        #endif
+        if (!mqtt_client.connect(clientId.c_str())) {
             ret = false ;
             delay(5000);
+        } else {
+            ret = true ;
+            Serial.println("[mqtt_connect] Subscribing : "+ cmdTopic) ; 
+            delay(2000);
+            mqtt_client.subscribe(cmdTopic.c_str());
         }
     }
     return ret ;
 }
 
 void loop() {
-    if (!mqtt_client.connected()) {
-        if (!reconnect_mqtt(10)) { 
-            ESP.restart() ;
-        } ;
+    
+    if (DEBUG) {Serial.println("--") ;} ;
+    if (WiFi.status() != WL_CONNECTED) {
+        wifi_connect();
+    }
+    if (!mqtt_client.connected() && WiFi.status() == WL_CONNECTED ) {
+       if (mqtt_connect(MQTT_RETRY)) { 
+           bootPub();
+        } else {
+            ESP.restart();
+        }
     }
     mqtt_client.loop(); // seems it blocks for 100ms
     
     if (boot_detected) { 
         bootPub() ;
-        statusPub("");
+        statusPub("boot detected");
         boot_detected = false ;
     }
     // DO NOT USE DELAY FUNCTION IN THIS LOOP
