@@ -21,6 +21,13 @@
 
 #define FW_VERSION "1.0f"
 
+//  TEST & DEBUG OPTION FLAGS
+#ifdef NDEBUG
+bool DEBUG = false ;
+#else
+bool DEBUG = true ;
+#endif
+
 #include <Arduino.h>
 #include <ESP8266WiFi.h>
 #include <WiFiClient.h>
@@ -37,21 +44,14 @@ int PIN_ZERO=D6 ;
 #include "WebOTA.h"
 #endif
 
-
-//  TEST & DEBUG OPTION FLAGS
-#ifdef NDEBUG
-bool DEBUG = false ;
-#else
-bool DEBUG = true ;
-#endif
-
 // WiFi + MQTT stuff.
 WiFiClient espClient ;
 PubSubClient mqtt_client(espClient); 
 String cmdTopic;
 String outTopic;
 String bootTopic;
-#define MQTT_RETRY 5     // How many retries before starting AccessPoint
+#define MQTT_RETRY 10     // How many retries before starting AccessPoint
+#define WIFI_RETRY 300    // How many retries before starting AccessPoint
 
 dimSCR dimmer(PIN_SCR, PIN_ZERO); //initialise port for dimmer(outPin, ZeroCrossing)
 
@@ -79,22 +79,19 @@ void setup_wifi () {
     Serial.println(WiFi.localIP());  //IP address assigned to your ESP
 }
 
-void wifi_connect () {
+void wifi_connect (int retry) {
     // Wait for connection (even it's already done)
-    int wifi_retry = 300 ; // retries during 5 min 
-
     while (WiFi.status() != WL_CONNECTED) {
         #ifdef USE_OLED
         oled_cls(1);
         display.println("Connecting");
-        display.println("wifi (" + String(wifi_retry)+")");  
+        display.println("wifi (" + String(retry)+")");  
         display.display();
         #endif
         Serial.print(".");
         delay(1000); // 1s
-        wifi_retry --;
-        if (wifi_retry < 0) { // wifi timeout 
-            Serial.println("Resetting due to Wifi timeout...");
+        retry --;
+        if (retry < 0) { // wifi timeout 
             ESP.restart() ;
         }
     }
@@ -261,14 +258,16 @@ void loop() {
     
     // if (DEBUG) {Serial.println("--") ;} ;
     if (WiFi.status() != WL_CONNECTED) {
-        wifi_connect();
+        wifi_connect(WIFI_RETRY);
     }
     if (!mqtt_client.connected() && WiFi.status() == WL_CONNECTED ) {
        if (mqtt_connect(MQTT_RETRY)) { 
            bootPub();
         } else {
-            if (DEBUG) {Serial.println("-- mqtt retry reached, rebooting...") ;} ;
-            ESP.restart();
+	    if (WiFi.status() == WL_CONNECTED) {
+	      if (DEBUG) {Serial.println("-- mqtt retry reached, rebooting...") ;} ;
+	      ESP.restart();
+            }
         }
     }
     mqtt_client.loop(); // seems it blocks for 100ms
