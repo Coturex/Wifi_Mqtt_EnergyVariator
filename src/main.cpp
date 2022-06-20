@@ -19,7 +19,7 @@
 // D5 : SCR Triac Dimmer - PWM IGBT Gate   (1023 Hz) - OUTPUT
 // D6 : ZeroCrossing pulse - INPUT
 
-#define FW_VERSION "1.0b"
+#define FW_VERSION "1.0f"
 
 #include <Arduino.h>
 #include <ESP8266WiFi.h>
@@ -136,14 +136,14 @@ void statusPub(String message) {
     String msg = "{";
     msg += "\"percent\": ";
     msg += String(dimmer.getPower()) ;
-    msg += ", \"power\": ";
+    msg += ", \"power\": 0";
     msg += ", \"mode\": ";
     msg += String(dimmer.getMode()) ;
     msg += ", \"state\": ";
     msg += String(dimmer.getState()) ;
-    msg += ", \"msg\": \"";
+    msg += ", \"msg\": ";
     msg += String(message) ;    
-    msg += "\"}";
+    msg += "}";
     if (DEBUG) {
         Serial.println("statusPub on topic : " + outTopic);
         Serial.println("statusPub : " + msg);
@@ -166,7 +166,7 @@ void on_message(char* topic, byte* payload, unsigned int length) {
     } else if (String(buffer) == "ota") { // OTA is requested
             #ifdef USE_OTA
            if (DEBUG) { Serial.println("     OTA requested") ; } ;
-            statusPub("OTA requested") ;
+            statusPub("OTA_requested") ;
 	        webota.handle(); 
             webota.delay(30000);    
             //statusPub("OTA timeout") ;
@@ -175,6 +175,8 @@ void on_message(char* topic, byte* payload, unsigned int length) {
 
     } else if (String(buffer) == "reboot") { // Reboot is requested
             if (DEBUG) { Serial.println("     Reboot resquested") ; } ;
+            statusPub("reboot_requested") ;
+            delay(1000) ;
             Serial.println("Resetting due to MQTT Reboot request...");
             ESP.restart(); 
     } else if (String(buffer) == "on") {  // Power set state to ON is requested
@@ -185,7 +187,7 @@ void on_message(char* topic, byte* payload, unsigned int length) {
             dimmer.setState(OFF) ;
     } else if (String(buffer) == "status") { // Status is requested
             if (DEBUG) { Serial.println("     Status resquested") ; } ;
-            statusPub("");
+            statusPub("status_requested") ;
     } else {
         float p = String(buffer).toFloat();
         if(p >= 0 && p<=100) {
@@ -230,7 +232,7 @@ void setup () {
 bool mqtt_connect(int retry) {
     bool ret = false ;
     while (!mqtt_client.connected() && WiFi.status() == WL_CONNECTED && retry) {
-        String clientId = "pzem-"+String(settings.pzem_id);
+        String clientId = "regul-"+String(settings.name);
         Serial.print("[mqtt_connect] (re)connecting (" + String(retry) + " left) ") ;
         retry--;
         Serial.println("[mqtt_connect]"+String(settings.mqtt_server)+":"+String(settings.mqtt_port)) ; 
@@ -257,7 +259,7 @@ bool mqtt_connect(int retry) {
 
 void loop() {
     
-    if (DEBUG) {Serial.println("--") ;} ;
+    // if (DEBUG) {Serial.println("--") ;} ;
     if (WiFi.status() != WL_CONNECTED) {
         wifi_connect();
     }
@@ -265,6 +267,7 @@ void loop() {
        if (mqtt_connect(MQTT_RETRY)) { 
            bootPub();
         } else {
+            if (DEBUG) {Serial.println("-- mqtt retry reached, rebooting...") ;} ;
             ESP.restart();
         }
     }
@@ -272,7 +275,7 @@ void loop() {
     
     if (boot_detected) { 
         bootPub() ;
-        statusPub("boot detected");
+        statusPub("boot_detected");
         boot_detected = false ;
     }
     // DO NOT USE DELAY FUNCTION IN THIS LOOP
