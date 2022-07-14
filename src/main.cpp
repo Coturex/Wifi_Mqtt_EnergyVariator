@@ -19,12 +19,13 @@
 // D5 : SCR Triac Dimmer - PWM IGBT Gate   (1023 Hz) - OUTPUT
 // D6 : ZeroCrossing pulse - INPUT
 
-#define FW_VERSION "1.0f"
+#define FW_VERSION "1.0"
 
 #include <Arduino.h>
 #include <ESP8266WiFi.h>
 #include <WiFiClient.h>
 #include <PubSubClient.h>       // Mqtt lib
+#include <ArduinoJson.h>
 
 #include "mySCR.h"
 #include "myConfig.h"         // WiFi and MQTT settings in this header : NOT 'Gited'
@@ -48,6 +49,7 @@ bool DEBUG = true ;
 // WiFi + MQTT stuff.
 WiFiClient espClient ;
 PubSubClient mqtt_client(espClient); 
+String domTopic; 
 String cmdTopic;
 String outTopic;
 String bootTopic;
@@ -61,13 +63,13 @@ bool boot_detected = false ;
 void setup_wifi () {
     delay(10);
     WiFi.softAPdisconnect (true);
+    Serial.println("Trying to connect wifi : " + String(settings.ssid));
     WiFi.begin(settings.ssid, settings.password);
     // Wait for connection
     while (WiFi.status() != WL_CONNECTED) {
         Serial.print(".");
         delay(1000);
     }
-
     Serial.println("");
     Serial.print("Wifi Connected");
   
@@ -156,42 +158,55 @@ void on_message(char* topic, byte* payload, unsigned int length) {
     memcpy(buffer, payload, length);
     buffer[length] = '\0';
     if (DEBUG) { Serial.println("[on_message] receiving msg on "+String(topic)+" : "+String(buffer));}; 
-    
-    if (String(buffer) == "bs") { // Bootstrap is requested
-            if (DEBUG) { Serial.println("     Bootstrap resquested") ; } ;
-            bootPub();
-    } else if (String(buffer) == "ap") { // AccessPoint is requested
-            if (DEBUG) { Serial.println("     AccessPoint resquested - not implemented") ; } ;
-            //rebootOnAP(1);
-    } else if (String(buffer) == "ota") { // OTA is requested
-            #ifdef USE_OTA
-           if (DEBUG) { Serial.println("     OTA requested") ; } ;
-            statusPub("OTA_requested") ;
-	        webota.handle(); 
-            webota.delay(30000);    
-            //statusPub("OTA timeout") ;
-            if (DEBUG) { Serial.println("     OTA timeout") ; } ;          
-            #endif
 
-    } else if (String(buffer) == "reboot") { // Reboot is requested
-            if (DEBUG) { Serial.println("     Reboot resquested") ; } ;
-            statusPub("reboot_requested") ;
-            delay(1000) ;
-            Serial.println("Resetting due to MQTT Reboot request...");
-            ESP.restart(); 
-    } else if (String(buffer) == "on") {  // Power set state to ON is requested
-            if (DEBUG) { Serial.println("     Power ON resquested") ; } ;
-            dimmer.setState(ON) ;
-    } else if (String(buffer) == "off") { // Power set state to OFF is requested
-            if (DEBUG) { Serial.println("     Power OFF resquested") ; } ;
-            dimmer.setState(OFF) ;
-    } else if (String(buffer) == "status") { // Status is requested
-            if (DEBUG) { Serial.println("     Status resquested") ; } ;
-            statusPub("status_requested") ;
-    } else {
-        float p = String(buffer).toFloat();
-        if(p >= 0 && p<=100) {
-            if (DEBUG) { Serial.println("     Set power to (%) : " + String(p)) ; } ;
+    // FROM TOPIC DOMOTICZ/OUT/...
+    if (String(topic) == String(settings.domTopic)) {
+        StaticJsonDocument <1024> doc;
+        deserializeJson(doc,payload);   
+        int nvalue = doc["nvalue"] ;
+        if (DEBUG) { Serial.print("[on_message] nvalue :" + String(nvalue)); };
+
+        nvalue = nvalue * 100 ;
+        if (DEBUG) { Serial.println("     Set power to (%) : " + String(nvalue)) ; } ;
+        previous_percent = String(nvalue).toFloat() ;
+        dimmer.setPower(nvalue) ;
+        statusPub("setPower from Domoticz");
+
+    } else { // FROM TOPIC MQTT .../CMD
+        if (String(buffer) == "bs") { // Bootstrap is requested
+                if (DEBUG) { Serial.println("     Bootstrap resquested") ; } ;
+                bootPub();
+        } else if (String(buffer) == "ap") { // AccessPoint is requested
+                if (DEBUG) { Serial.println("     AccessPoint resquested - not implemented") ; } ;
+                //rebootOnAP(1);
+        } else if (String(buffer) == "ota") { // OTA is requested
+                #ifdef USE_OTA
+                if (DEBUG) { Serial.println("     OTA requested") ; } ;
+                statusPub("OTA_requested") ;
+	            webota.handle(); 
+                webota.delay(30000);    
+                //statusPub("OTA timeout") ;
+                if (DEBUG) { Serial.println("     OTA timeout") ; } ;          
+                #endif
+        } else if (String(buffer) == "reboot") { // Reboot is requested
+                if (DEBUG) { Serial.println("     Reboot resquested") ; } ;
+                statusPub("reboot_requested") ;
+                delay(1000) ;
+                Serial.println("Resetting due to MQTT Reboot request...");
+                ESP.restart(); 
+        } else if (String(buffer) == "on") {  // Power set state to ON is requested
+                if (DEBUG) { Serial.println("     Power ON resquested") ; } ;
+                dimmer.setState(ON) ;
+        } else if (String(buffer) == "off") { // Power set state to OFF is requested
+                if (DEBUG) { Serial.println("     Power OFF resquested") ; } ;
+                dimmer.setState(OFF) ;
+        } else if (String(buffer) == "status") { // Status is requested
+                if (DEBUG) { Serial.println("     Status resquested") ; } ;
+                statusPub("status_requested") ;
+        } else {
+                float p = String(buffer).toFloat();
+                if(p >= 0 && p<=100) {
+                    if (DEBUG) { Serial.println("     Set power to (%) : " + String(p)) ; } ;
             /*
             if ((p - previous_percent) > 10) {
                 dimmer.setMode(SMOUTH_MODE);
@@ -200,9 +215,10 @@ void on_message(char* topic, byte* payload, unsigned int length) {
                 dimmer.setMode(NORMAL_MODE);
             }
             */
-            previous_percent = p ;
-            dimmer.setPower(p) ;
-            statusPub("");
+                    previous_percent = p ;
+                    dimmer.setPower(p) ;
+                    statusPub("");
+                }
         }
     }
 }
@@ -220,8 +236,10 @@ void setup () {
     bootTopic = String(settings.topic) ;
     outTopic = String(settings.topic) + "/" + String(settings.name) ;         //e.g topic :regul/vload/id-00/
     cmdTopic = outTopic + "/cmd" ;
+    domTopic = String(settings.domTopic) ;
 
     mqtt_client.setServer(settings.mqtt_server, settings.mqtt_port); // data will be published
+    mqtt_client.setBufferSize(512) ;
     mqtt_client.setCallback(on_message); // subscribing/listening mqtt cmdTopic
     
     dimmer.begin(NORMAL_MODE, ON); //dimmer initialisation: name.begin(MODE, STATE) 
@@ -250,8 +268,10 @@ bool mqtt_connect(int retry) {
         } else {
             ret = true ;
             Serial.println("[mqtt_connect] Subscribing : "+ cmdTopic) ; 
-            delay(2000);
             mqtt_client.subscribe(cmdTopic.c_str());
+            Serial.println("[mqtt_connect] Subscribing : "+ domTopic) ; 
+            mqtt_client.subscribe(domTopic.c_str());
+            delay(2000);
         }
     }
     return ret ;
@@ -274,7 +294,6 @@ void loop() {
     mqtt_client.loop(); // seems it blocks for 100ms
     
     if (boot_detected) { 
-        bootPub() ;
         statusPub("boot_detected");
         boot_detected = false ;
     }

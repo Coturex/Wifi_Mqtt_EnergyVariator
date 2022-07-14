@@ -8,4 +8,6 @@ struct {
     char mqtt_server[SL] = "192.168.43.118";
     int  mqtt_port  = 1883 ;
     char topic[SL] = "regul/vload" ;
+    char domTopic[SL] = "domoticz/out/ECS_Cumulus_vload" ;  // domoticz idx
+
 } settings;
