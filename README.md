@@ -13,6 +13,9 @@
  
  
   ![aliExpressScr](https://github.com/Coturex/Wifi_Mqtt_EnergyVariator/blob/main/doc/scr_aliExpress.jpeg)
+
+  Green PCB need Level Shifter on wemos.d5  (3.3v -> 5v) 
+  White PCB doesn't need Level Shifter
   
  * ESP Board : Wemos d1 mini (CH341 uart), esp8266
    - When choosing GPIO pins to use, it's best to avoid GPIO 0, 2 and 15 (D3, D4, D8)

@@ -52,7 +52,12 @@ void dimSCR::begin(DIMMER_MODE_typedef DIMMER_MODE, ON_OFF_typedef ON_OFF)
 	//timer1_write(100*TICKS); //100 us
 
 	// listen for change on the pin ZERO
+
+	#ifdef USE_MYSCR_GREEN_PCB
 	attachInterrupt(dimZCPin, onZero, RISING);
+	#else
+	attachInterrupt(dimZCPin, onZero, CHANGE);
+	#endif
 	if (DEBUG_ISR){Serial.println("[RBD] *** Init ISR Zero on pin : " + String(dimZCPin));} ;
 }
 
@@ -84,7 +89,8 @@ void pulseStart(void) { // called when the delay after the zero crossing has exp
 	}
     if (DEBUG_ISR){Serial.println("[RBD] SCR high on pin :" + String(dimOutPin));} ;
 	#ifdef USE_MYSCR_GREEN_PCB
-	call_later(10, pulseEnd);
+	call_later(dimPower < 50 ? 5 : 3000, pulseEnd);
+	//call_later(10, pulseEnd);
 	#else
 	call_later(dimPower < 50 ? 5 : 3000, pulseEnd);
 	#endif
@@ -98,8 +104,9 @@ void IRAM_ATTR onZero()
 			 // generate a pulse after this zero
         	// power=100%: no wait, power=0%: wait 10ms
         	//unsigned long delay = dimPower==100 ? 30 : (100-dimPower)*100;
-        	unsigned long delay = dimPower==100 ? 30 : (100-dimPower)*100;
-        	call_later(delay, pulseStart);
+        	
+			unsigned long delay = dimPower==100 ? 30 : (100-dimPower)*100;
+        	call_later(delay, pulseStart);    	
     	}
 	}
 }

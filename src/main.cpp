@@ -19,7 +19,13 @@
 // D5 : SCR Triac Dimmer - PWM IGBT Gate   (1023 Hz) - OUTPUT
 // D6 : ZeroCrossing pulse - INPUT
 
-#define FW_VERSION "1.0"
+#define FW_VERSION "1.1"
+
+#ifdef USE_MYSCR_GREEN_PCB
+#define PCB "green"
+#else
+#define PCB "white" 
+#endif
 
 //  TEST & DEBUG OPTION FLAGS
 #ifdef NDEBUG
@@ -117,6 +123,8 @@ void bootPub() {
                 msg += "\"" + String(settings.name) + "\"" ;
                 msg += ", \"fw_version\": ";
                 msg += "\"" + String(FW_VERSION) + "\"" ;
+                msg += ", \"PCB\": ";
+                msg += "\"" + String(PCB) + "\"" ;
                 msg += ", \"chip_id\": ";
                 msg += "\"" + String(ESP.getChipId()) + "\"" ;
                 msg += ", \"ip\": \"";  
