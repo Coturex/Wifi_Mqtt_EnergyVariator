@@ -10,11 +10,14 @@
 
 ## Hardware requirements:   ~20 €
  * Power variator
+
+  The firwmware can manage 2 types of Aliexpress triac power variator ;
  
  
   ![aliExpressScr](https://github.com/Coturex/Wifi_Mqtt_EnergyVariator/blob/main/doc/scr_aliExpress.jpeg)
 
   Green PCB need Level Shifter on wemos.d5  (3.3v -> 5v) 
+  
   White PCB doesn't need Level Shifter
   
  * ESP Board : Wemos d1 mini (CH341 uart), esp8266
