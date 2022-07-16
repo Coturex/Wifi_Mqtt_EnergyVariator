@@ -17,7 +17,9 @@
   ![aliExpressScr](https://github.com/Coturex/Wifi_Mqtt_EnergyVariator/blob/main/doc/scr_aliExpress.jpeg)
 
   Green PCB need Level Shifter on wemos.d5  (3.3v -> 5v) 
-  
+
+  ![aliExpressScr](https://github.com/Coturex/Wifi_Mqtt_EnergyVariator/blob/main/doc/levelshifter.png)
+
   White PCB doesn't need Level Shifter
   
  * ESP Board : Wemos d1 mini (CH341 uart), esp8266
