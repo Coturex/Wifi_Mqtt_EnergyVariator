@@ -1,0 +1,13 @@
+SCR.Gnd  -> wemos.Gnd
+SCR.Zero -> wemos.D6
+SCR.Scr  -> wemos.D5     (AliExpress WHITE PCB)
+SCR.Scr  -> lvs.LV1      (AliExpress green PCB) 
+SCR.5V   -> NOT CONNECTED
+
+ACDC.+ -> wemos.5v
+ACDC.- -> wemos.Gnd
+
+lvs.LV  -> wemos.3v3  (AliExpress green PCB) 
+lvs.HV  -> wemos.5v   (AliExpress green PCB) 
+lvs.GND -> wemos.Gnd  (AliExpress green PCB)  
+lvs.LV1 -> SCR.Scr    (AliExpress green PCB) 
