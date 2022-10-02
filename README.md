@@ -5,7 +5,7 @@
  * Publish Power values on MQTT 'vload topic' 
  * WebOTA : On The Air firmware update on mqtt command ('ota' -> topic/cmd)
   
-   URL : http://<pzem_ip>:8080/update
+   URL : http://<device_ip>:8080/update
     
 
 ## Hardware requirements:   ~20 €
@@ -16,11 +16,13 @@
  
   ![aliExpressScr](https://github.com/Coturex/Wifi_Mqtt_EnergyVariator/blob/main/doc/scr_aliExpress.jpeg)
 
+  White PCB doesn't need Level Shifter
+
   Green PCB need Level Shifter on wemos.d5  (3.3v -> 5v) 
+  Firmware must use 'reverse pulse' 
 
   ![aliExpressScr](https://github.com/Coturex/Wifi_Mqtt_EnergyVariator/blob/main/doc/levelshifter.png)
 
-  White PCB doesn't need Level Shifter
   
  * ESP Board : Wemos d1 mini (CH341 uart), esp8266
    - When choosing GPIO pins to use, it's best to avoid GPIO 0, 2 and 15 (D3, D4, D8)
@@ -31,13 +33,6 @@
    - I2C wired on D1-SCL D2-SDA
 
 * AC-DC 5V 700mA-Small
-
-## FYI : 
-some Linux distrib (Ubuntu 20.x) failed on connect Uart CH340/1 while flashing ESP8266
-
-     →  "Timed out waiting for packet header"
-fixed in kernels 5.13.14 and maybe upper 
-(https://cdn.kernel.org/pub/linux/kernel/v5.x/ChangeLog-5.13.14)
 
 ## Todo :
  IGBT :

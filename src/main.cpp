@@ -19,13 +19,9 @@
 // D5 : SCR Triac Dimmer - PWM IGBT Gate   (1023 Hz) - OUTPUT
 // D6 : ZeroCrossing pulse - INPUT
 
-#define FW_VERSION "1.1"
-
-#ifdef USE_MYSCR_GREEN_PCB
-#define PCB "green"
-#else
-#define PCB "white" 
-#endif
+#define FW_VERSION "1.1b"  // will be published on mqtt
+#define PCB "white" // set "white" or "green"  and uncomment // #define USE_MYSCR_GREEN_PCB
+// #define USE_MYSCR_GREEN_PCB
 
 //  TEST & DEBUG OPTION FLAGS
 #ifdef NDEBUG
@@ -33,6 +29,7 @@ bool DEBUG = false ;
 #else
 bool DEBUG = true ;
 #endif
+bool DEBUG_TOPIC = true ;
 
 #include <Arduino.h>
 #include <ESP8266WiFi.h>
@@ -57,7 +54,12 @@ PubSubClient mqtt_client(espClient);
 String domTopic; 
 String cmdTopic;
 String outTopic;
+String debugTopic;
 String bootTopic;
+
+String last_datetime = "" ; // last dateTime received from domoticz order
+int last_nvalue = 999 ;   // last power value received from domoticz order
+
 #define MQTT_RETRY 10     // How many retries before starting AccessPoint
 #define WIFI_RETRY 300    // How many retries before starting AccessPoint
 
@@ -132,7 +134,7 @@ void bootPub() {
                 #ifdef USE_OTA
                 msg += "\", \"OTA\": \"mqtt\""; 
                 #else
-                msg += ", \"OTA\": \"no\""; 
+                msg += ", \"OTA\": \"not implemented\""; 
                 #endif
                 msg += "}" ;
         if (DEBUG) { Serial.println("Sending Bootstrap on topic : " + String(bootTopic));}
@@ -147,35 +149,66 @@ void statusPub(String message) {
     msg += ", \"mode\": ";
     msg += String(dimmer.getMode()) ;
     msg += ", \"state\": ";
-    msg += String(dimmer.getState()) ;
-    msg += ", \"msg\": ";
+    // msg += String(dimmer.getState()) ;
+
+    if (String(dimmer.getState()) =="1") 
+         msg += "\"ON\"" ;
+    else msg += "\"OFF\"" ;
+
+    msg += ", \"msg\": \"";
     msg += String(message) ;    
-    msg += "}";
+    msg += "\"}";
+
     if (DEBUG) {
-        Serial.println("statusPub on topic : " + outTopic);
-        Serial.println("statusPub : " + msg);
+        Serial.println("[statusPub] on topic : " + outTopic);
+        Serial.println("[statusPub] send msg : " + msg);
       }
     mqtt_client.publish(String(outTopic).c_str(), msg.c_str()); 
 } 
+
+void debugPub(String message) {
+    String msg = String(message) ;
+    if (DEBUG_TOPIC) {
+        mqtt_client.publish(String(debugTopic).c_str(), msg.c_str());
+    }    
+}
 
 void on_message(char* topic, byte* payload, unsigned int length) {
     char buffer[length+1];
     memcpy(buffer, payload, length);
     buffer[length] = '\0';
-    if (DEBUG) { Serial.println("[on_message] receiving msg on "+String(topic)+" : "+String(buffer));}; 
+    if (DEBUG) { Serial.println("\n[on_message] receiving msg on "+String(topic)+" : "+String(buffer));}; 
 
-    // FROM TOPIC DOMOTICZ/OUT/...
+    // Received order FROM TOPIC DOMOTICZ/OUT/...
     if (String(topic) == String(settings.domTopic)) {
         StaticJsonDocument <1024> doc;
         deserializeJson(doc,payload);   
         int nvalue = doc["nvalue"] ;
-        if (DEBUG) { Serial.print("[on_message] nvalue :" + String(nvalue)); };
+        String lastupdate = doc["LastUpdate"] ;
 
+        if (DEBUG) { Serial.println("[on_message] Received nvalue :" + String(nvalue)); };
+        /*
+        if (nvalue == last_nvalue) {
+            if (DEBUG) { Serial.print("[on_message] same nvalue  last_nvalue, order ignored"); };
+            debugPub (lastupdate + String(" , same last_nvalue, order ignored")) ;
+            return ;
+        }
+        */
+
+        if (lastupdate == last_datetime) {
+            if (DEBUG) { Serial.println("[on_message] same dateTime, domoticz order ignored"); };
+            debugPub (lastupdate + String(" , same datetime, domoticz order ignored")) ;
+            return ;
+        }
+
+        last_datetime  = lastupdate ;
+        last_nvalue = nvalue ;
         nvalue = nvalue * 100 ;
-        if (DEBUG) { Serial.println("     Set power to (%) : " + String(nvalue)) ; } ;
+        if (DEBUG) { Serial.println("[on_message] Set power to (%) : " + String(nvalue)) ; } ;
         previous_percent = String(nvalue).toFloat() ;
         dimmer.setPower(nvalue) ;
         statusPub("setPower from Domoticz");
+        debugPub(lastupdate) ;
 
     } else { // FROM TOPIC MQTT .../CMD
         if (String(buffer) == "bs") { // Bootstrap is requested
@@ -202,9 +235,11 @@ void on_message(char* topic, byte* payload, unsigned int length) {
         } else if (String(buffer) == "on") {  // Power set state to ON is requested
                 if (DEBUG) { Serial.println("     Power ON resquested") ; } ;
                 dimmer.setState(ON) ;
+                statusPub("set ON");
         } else if (String(buffer) == "off") { // Power set state to OFF is requested
                 if (DEBUG) { Serial.println("     Power OFF resquested") ; } ;
                 dimmer.setState(OFF) ;
+                statusPub("set OFF");
         } else if (String(buffer) == "status") { // Status is requested
                 if (DEBUG) { Serial.println("     Status resquested") ; } ;
                 statusPub("status_requested") ;
@@ -222,7 +257,7 @@ void on_message(char* topic, byte* payload, unsigned int length) {
             */
                     previous_percent = p ;
                     dimmer.setPower(p) ;
-                    statusPub("");
+                    statusPub("setpower");
                 }
         }
     }
@@ -240,6 +275,7 @@ void setup () {
     
     bootTopic = String(settings.topic) ;
     outTopic = String(settings.topic) + "/" + String(settings.name) ;         //e.g topic :regul/vload/id-00/
+    debugTopic = outTopic + "/debug" ;
     cmdTopic = outTopic + "/cmd" ;
     domTopic = String(settings.domTopic) ;
 
@@ -291,6 +327,7 @@ void loop() {
     if (!mqtt_client.connected() && WiFi.status() == WL_CONNECTED ) {
        if (mqtt_connect(MQTT_RETRY)) { 
            bootPub();
+           if (DEBUG_TOPIC) debugPub("DEBUG ACTIVATED");
         } else {
 	    if (WiFi.status() == WL_CONNECTED) {
 	      if (DEBUG) {Serial.println("-- mqtt retry reached, rebooting...") ;} ;

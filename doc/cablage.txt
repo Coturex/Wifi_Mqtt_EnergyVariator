@@ -1,13 +1,27 @@
-SCR.Gnd  -> wemos.Gnd
-SCR.Zero -> wemos.D6
-SCR.Scr  -> wemos.D5     (AliExpress WHITE PCB)
-SCR.Scr  -> lvs.LV1      (AliExpress green PCB) 
-SCR.5V   -> NOT CONNECTED
+***** WHITE PCB (AliExpress)
+	   SCR.5V   -> NOT CONNECTED
+	   SCR.Gnd  -> wemos.Gnd
+	   SCR.Zero -> wemos.D6
 
-ACDC.+ -> wemos.5v
-ACDC.- -> wemos.Gnd
+	   SCR.Scr  -> wemos.D5     
+	
+	   ACDC.+ -> wemos.5v
+	   ACDC.- -> wemos.Gnd
+	
+***** GREEN PCB (AliExpress) 
+    Need Level Shifter 
+    Firmware must use 'reverse pulse' on SCR algoritme
 
-lvs.LV  -> wemos.3v3  (AliExpress green PCB) 
-lvs.HV  -> wemos.5v   (AliExpress green PCB) 
-lvs.GND -> wemos.Gnd  (AliExpress green PCB)  
-lvs.LV1 -> SCR.Scr    (AliExpress green PCB) 
+	   SCR.5V   -> NOT CONNECTED
+       SCR.Gnd  -> wemos.Gnd 
+       SCR.Zero -> wemos.D6
+
+	   SCR.Scr  -> lvs.LV1   
+
+	   ACDC.+ -> wemos.5v
+	   ACDC.- -> wemos.Gnd
+
+	   lvs.LV  -> wemos.3v3  
+	   lvs.HV  -> wemos.5v   
+	   lvs.GND -> wemos.Gnd  
+	   lvs.LV1 -> SCR.Scr    
